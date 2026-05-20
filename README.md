@@ -1,6 +1,6 @@
 # Regulatory Radar
 
-A weekly intelligence agent for CISOs. Monitors real-world threat signals, regulatory updates, and vulnerability data, then surfaces multi-signal provocations in board-ready language — connecting genuine cyber risk to commercial consequence.
+A weekly intelligence agent for CISOs. Monitors real-world threat signals, regulatory updates, and vulnerability data, then surfaces multi-signal provocations in board-ready language that connects genuine cyber risk to commercial consequence.
 
 **This is not a compliance tracker. It is a provocation engine backed by evidence.**
 
@@ -10,14 +10,14 @@ A weekly intelligence agent for CISOs. Monitors real-world threat signals, regul
 
 Most regulatory tracking tools treat all compliance signals equally. Regulatory Radar doesn't.
 
-The agent watches for *signal combinations* — a breach report alone is noise; a breach report + a carrier updating their insurance questionnaire + a new NCSC advisory on the same vector is a provocation worth interrupting a CISO's week for.
+The agent watches for signal combinations. A breach report alone is noise. A breach report plus a carrier updating their insurance questionnaire plus a new NCSC advisory on the same vector is a provocation worth interrupting a CISO's week for.
 
-Output: **Provocation cards** — structured intelligence cards with 5 layers:
-1. Signal headline — what is happening right now
-2. Evidence stack — the signals that triggered this card, source-attributed
-3. Compliance gap — where this falls through the audit landscape
-4. Contextual question — "is this true in your organisation?"
-5. Board talking point — one paragraph the CISO can use almost verbatim
+Output: **Provocation cards** - structured intelligence cards with 5 layers:
+1. Signal headline - what is happening right now
+2. Evidence stack - the signals that triggered this card, source attributed
+3. Compliance gap - where this falls through the audit landscape
+4. Contextual question - "is this true in your organisation?"
+5. Board talking point - one paragraph the CISO can use almost verbatim
 
 ---
 
@@ -25,16 +25,16 @@ Output: **Provocation cards** — structured intelligence cards with 5 layers:
 
 ```
 regulatory-radar/
-├── backend/          # Python / FastAPI — signal ingestion + API
-├── frontend/         # Next.js (App Router) — dashboard UI
+├── backend/          # Python / FastAPI - signal ingestion + API
+├── frontend/         # Next.js (App Router) - dashboard UI
 └── supabase/         # Postgres migrations
     └── migrations/
 ```
 
-**Signal flow:**
+Signal flow:
 
 ```
-External sources → Ingesters → signals table → (future) combination detector → provocation cards
+External sources -> Ingesters -> signals table -> (future) combination detector -> provocation cards
 ```
 
 ---
@@ -45,7 +45,7 @@ External sources → Ingesters → signals table → (future) combination detect
 |-------|-----------|
 | Backend | Python 3.11+, FastAPI, APScheduler |
 | Frontend | Next.js 14 (App Router), TypeScript, Tailwind CSS |
-| Database | Postgres (default: Supabase — see *Alternative databases* below) |
+| Database | Postgres (default: Supabase, see Alternative databases below) |
 | HTTP client | httpx (async) |
 | Feed parsing | feedparser |
 
@@ -68,13 +68,13 @@ External sources → Ingesters → signals table → (future) combination detect
 
 - Python 3.11+
 - Node.js 20+
-- A Supabase project (free tier works) — or see *Alternative databases*
+- A Supabase project (free tier works) or see Alternative databases below
 
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/your-org/regulatory-radar.git
-cd regulatory-radar
+git clone https://github.com/ejwmcdonagh/reg-radar.git
+cd reg-radar
 ```
 
 Copy and fill in environment variables:
@@ -90,16 +90,16 @@ SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
-Find these in your Supabase project under **Settings → API**.
+Find these in your Supabase project under Settings > API.
 
 ### 2. Run the database migration
 
-Option A — Supabase CLI:
+Option A - Supabase CLI:
 ```bash
 supabase db push
 ```
 
-Option B — paste directly into the Supabase SQL editor:
+Option B - paste directly into the Supabase SQL editor:
 ```bash
 cat supabase/migrations/001_signals.sql
 ```
@@ -108,9 +108,9 @@ cat supabase/migrations/001_signals.sql
 
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
 uvicorn app.main:app --reload
 ```
 
@@ -132,7 +132,7 @@ Dashboard runs at `http://localhost:3000`.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/signals` | List signals — query params: `source`, `risk_domain`, `limit`, `offset` |
+| `GET` | `/api/signals` | List signals. Query params: `source`, `risk_domain`, `limit`, `offset` |
 | `GET` | `/api/signals/stats` | Signal counts by source and domain |
 | `GET` | `/api/signals/{id}` | Single signal |
 | `POST` | `/api/ingest/run?source={source}` | Trigger a manual ingestion run |
@@ -146,7 +146,7 @@ Valid `risk_domain` values: `identity_credential`, `vulnerability_patch`, `suppl
 ### Manual ingestion (development)
 
 ```bash
-# Trigger a CISA KEV run and see how many signals were ingested
+# Trigger a CISA KEV run
 curl -X POST "http://localhost:8000/api/ingest/run?source=cisa_kev"
 
 # List signals in the identity domain
@@ -157,13 +157,13 @@ curl "http://localhost:8000/api/signals?risk_domain=identity_credential&limit=10
 
 ## Alternative databases
 
-The backend uses `supabase-py`, which talks to Postgres via the [PostgREST](https://postgrest.org/) protocol. You can swap Supabase for any Postgres host by running PostgREST yourself:
+The backend uses supabase-py, which talks to Postgres via the [PostgREST](https://postgrest.org/) protocol. You can swap Supabase for any Postgres host by running PostgREST yourself:
 
 1. Deploy PostgREST pointing at your Postgres instance
 2. Update `SUPABASE_URL` to your PostgREST endpoint
 3. Update `SUPABASE_SERVICE_ROLE_KEY` to your PostgREST JWT secret
 
-The SQL in `supabase/migrations/` is standard Postgres — no Supabase-specific extensions required.
+The SQL in `supabase/migrations/` is standard Postgres with no Supabase-specific extensions required.
 
 ---
 
@@ -178,23 +178,21 @@ Signals are tagged to one or more domains based on content:
 | `supply_chain` | Vendor compromise, software dependency attacks, third-party access |
 | `detection_response` | Dwell time, alert fatigue, logging coverage gaps |
 | `data_exposure` | Misconfigured storage, excessive access, exfiltration vectors |
-| `ransomware_extortion` | Cross-domain worst-case lens — maps to board and insurer mental model |
+| `ransomware_extortion` | Cross-domain worst-case lens that maps to board and insurer mental model |
 
-Domain mapping logic lives in `backend/app/domain_mapper.py` and is keyword-based in V1. This will be replaced with LLM-assisted classification once there's sufficient signal volume to evaluate quality.
+Domain mapping logic lives in `backend/app/domain_mapper.py` and is keyword-based in V1. This will be replaced with LLM-assisted classification once there is sufficient signal volume to evaluate quality.
 
 ---
 
 ## Build sequence
 
-This repo follows a defined build sequence from the product brief:
-
-- [x] **Step 1** — Signal ingestion layer (this)
-- [ ] **Step 2** — Signal combination detection logic
-- [ ] **Step 3** — Provocation card generator (prompt engineering)
-- [ ] **Step 4** — Dashboard shell (domain swim-lane layout)
-- [ ] **Step 5** — MCP integration (SIEM + ticketing aggregation)
-- [ ] **Step 6** — Email digest renderer
-- [ ] **Step 7** — Onboarding flow
+- [x] **Step 1** - Signal ingestion layer (this)
+- [ ] **Step 2** - Signal combination detection logic
+- [ ] **Step 3** - Provocation card generator (prompt engineering)
+- [ ] **Step 4** - Dashboard shell (domain swim-lane layout)
+- [ ] **Step 5** - MCP integration (SIEM + ticketing aggregation)
+- [ ] **Step 6** - Email digest renderer
+- [ ] **Step 7** - Onboarding flow
 
 ---
 
