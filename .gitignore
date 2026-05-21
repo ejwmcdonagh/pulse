@@ -27,3 +27,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Generated docs - keep out of version control
+*.md
+!README.md
