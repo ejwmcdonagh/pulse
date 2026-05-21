@@ -16,7 +16,7 @@ export default async function SettingsPage() {
       <header className="border-b border-zinc-200 bg-white px-6 py-4">
         <div className="flex items-baseline justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-900">Customize your feed</h1>
+            <h1 className="text-lg font-semibold text-zinc-900">Pulse</h1>
             <p className="text-xs text-zinc-400 mt-0.5">Control your sources and highlight what matters to you</p>
           </div>
           <Link href="/" className="text-xs text-zinc-400 hover:text-zinc-700 transition-colors">

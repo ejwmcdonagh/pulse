@@ -22,9 +22,9 @@ export default async function Home() {
       <header className="border-b border-zinc-200 bg-white px-6 py-4 shrink-0">
         <div className="flex items-baseline justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-900">Regulatory Radar</h1>
+            <h1 className="text-lg font-semibold text-zinc-900">Pulse</h1>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Multi-signal threat intelligence for CISOs
+              Live signals. Real risk. Board-ready.
             </p>
           </div>
           <div className="flex items-center gap-4 text-xs text-zinc-500">

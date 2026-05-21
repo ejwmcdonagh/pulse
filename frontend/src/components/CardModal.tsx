@@ -116,14 +116,6 @@ export default function CardModal({ card, onClose }: Props) {
             </ul>
           </section>
 
-          {/* Layer 3: Compliance gap */}
-          <section>
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3">
-              Compliance gap
-            </h3>
-            <p className="text-sm text-zinc-700 leading-7">{card.compliance_gap}</p>
-          </section>
-
           {/* Layer 4: Contextual question */}
           <section>
             <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3">
@@ -134,6 +126,14 @@ export default function CardModal({ card, onClose }: Props) {
                 {card.contextual_question}
               </p>
             </blockquote>
+          </section>
+
+          {/* Layer 3: Regulatory exposure */}
+          <section>
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3">
+              Regulatory exposure
+            </h3>
+            <p className="text-sm text-zinc-700 leading-7">{card.compliance_gap}</p>
           </section>
 
           {/* Layer 5: Board talking point */}

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Regulatory Radar",
-  description: "Multi-signal threat intelligence for CISOs",
+  title: "Pulse",
+  description: "Live signals. Real risk. Board-ready.",
 };
 
 export default function RootLayout({

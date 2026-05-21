@@ -1,22 +1,24 @@
-# Regulatory Radar
+# Pulse
 
-Regulatory Radar watches cybersecurity news from trusted government sources, groups related threats together, and writes intelligence cards a CISO can take straight into a board meeting.
+Live signals. Real risk. Board-ready.
 
-It is not a compliance checklist. It is a threat intelligence feed that tells you what matters, why it matters, and what to say about it.
+Pulse watches cybersecurity threat data from eight live sources, groups related signals together, scores them by real-world risk, and writes intelligence cards a CISO can take straight into a board meeting.
+
+It is not a compliance tracker. It is a risk intelligence feed that tells you what is happening right now, how serious it is, and what to say about it.
 
 ---
 
 ## What problem does it solve?
 
-Security teams are buried in alerts. Most tools just list them. Regulatory Radar reads them, groups the ones that are connected, scores how urgent each group is, and writes a plain-English card for each one.
+Security teams are buried in alerts. Most tools just list them. Pulse reads them, groups the ones that are connected, scores them by real-world risk, and writes a plain-English card for each one.
 
 Each card has five parts:
 
-1. **What is happening** - one sentence, present tense
+1. **What is happening** - one sentence, present tense, threat-first
 2. **The evidence** - which sources triggered this card and why
-3. **The compliance gap** - which regulation or audit standard this exposes
-4. **A question for your team** - something you can ask in a meeting tomorrow
-5. **Board talking point** - three sentences a non-technical director can understand
+3. **A question for your team** - something you can ask in a meeting tomorrow
+4. **Regulatory exposure** - which regulations make this risk commercially consequential
+5. **Board talking point** - plain English the board can act on, written for non-technical directors
 
 ---
 
