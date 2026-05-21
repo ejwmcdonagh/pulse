@@ -26,7 +26,7 @@ import feedparser
 from app.domain_mapper import map_domains
 from app.http import async_client
 from app.ingestion.base import BaseIngester
-from app.models.enums import SignalSource, SignalType
+from app.models.enums import RiskDomain, SignalSource, SignalType
 from app.models.signal import Signal
 from app.severity_mapper import infer_severity
 
@@ -34,9 +34,17 @@ from app.severity_mapper import infer_severity
 class ResearchFeedIngester(BaseIngester):
     """Generic RSS ingester for threat research blogs."""
 
-    def __init__(self, source: SignalSource, feed_url: str) -> None:
+    def __init__(
+        self,
+        source: SignalSource,
+        feed_url: str,
+        default_domains: list[RiskDomain] | None = None,
+    ) -> None:
         self.source = source
         self.feed_url = feed_url
+        # Domains guaranteed on every signal from this source regardless of keywords.
+        # Use for sources whose content is always tied to a specific domain.
+        self.default_domains = default_domains or []
 
     async def fetch(self) -> list[Signal]:
         async with async_client(timeout=30) as client:
@@ -65,6 +73,11 @@ class ResearchFeedIngester(BaseIngester):
 
         tags = [t.get("term", "") for t in entry.get("tags", []) if t.get("term")]
 
+        domains = map_domains(title, summary, tags)
+        for d in self.default_domains:
+            if d not in domains:
+                domains.append(d)
+
         return Signal(
             source=self.source,
             source_id=source_id,
@@ -73,7 +86,7 @@ class ResearchFeedIngester(BaseIngester):
             summary=summary,
             published_at=published_at,
             severity=infer_severity(title, summary),
-            risk_domains=map_domains(title, summary, tags),
+            risk_domains=domains,
             tags=tags,
             url=link or None,
             raw_data={
@@ -119,6 +132,7 @@ MicrosoftSecurityIngester = ResearchFeedIngester(
 CofenseIngester = ResearchFeedIngester(
     source=SignalSource.COFENSE,
     feed_url="https://cofense.com/feed/",
+    default_domains=[RiskDomain.IDENTITY_CREDENTIAL],
 )
 
 KrebsIngester = ResearchFeedIngester(
