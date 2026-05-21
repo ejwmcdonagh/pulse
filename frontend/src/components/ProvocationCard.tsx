@@ -91,13 +91,13 @@ export default function ProvocationCardComponent({
         tabIndex={0}
         onClick={() => setOpen(true)}
         onKeyDown={(e) => e.key === "Enter" && setOpen(true)}
-        className={`cursor-pointer rounded-lg border bg-white p-4 shadow-sm flex flex-col justify-between h-72 hover:shadow-md transition-all ${
+        className={`cursor-pointer rounded-lg border bg-white p-4 shadow-sm flex flex-col h-72 hover:shadow-md transition-all ${
           highlighted
             ? "border-amber-400 ring-1 ring-amber-300"
             : "border-zinc-200 hover:border-zinc-400"
         }`}
       >
-        <div className="flex flex-col gap-2 min-h-0">
+        <div className="flex flex-col gap-2 flex-1 min-h-0 overflow-hidden">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-1.5 flex-wrap">
               <ScoreBadge score={card.score} />
@@ -118,7 +118,7 @@ export default function ProvocationCardComponent({
               ? (card.simple_headline ?? card.board_talking_point.split(/(?<=[.!?])\s+/)[0])
               : card.signal_headline}
           </p>
-          <p className="text-xs text-zinc-500 line-clamp-3">
+          <p className="text-xs text-zinc-500 line-clamp-1">
             {simpleMode
               ? card.board_talking_point.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ")
               : card.metadata.cluster_summary}
