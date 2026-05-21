@@ -108,6 +108,15 @@ export async function fetchBuiltinSources(): Promise<BuiltinSource[]> {
   return data.sources ?? [];
 }
 
+export async function fetchArchivedCards(before?: string): Promise<ProvocationCard[]> {
+  const params = new URLSearchParams({ status: "archived", limit: "200" });
+  if (before) params.set("before", before);
+  const res = await fetch(`${API_BASE}/api/cards?${params}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch archived cards: ${res.status}`);
+  const data = await res.json();
+  return data.cards ?? [];
+}
+
 export async function dismissCard(cardId: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/cards/${cardId}/dismiss`, { method: "POST" });
   if (!res.ok) throw new Error(`Failed to dismiss card: ${res.status}`);

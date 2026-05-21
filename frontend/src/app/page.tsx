@@ -31,6 +31,12 @@ export default async function Home() {
             <span>{activeCards} active {activeCards === 1 ? "card" : "cards"}</span>
             <span>{DOMAINS.length} domains</span>
             <Link
+              href="/archive"
+              className="text-zinc-400 hover:text-zinc-600 transition-colors"
+            >
+              Dismissed
+            </Link>
+            <Link
               href="/settings"
               className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:border-zinc-400 hover:bg-zinc-50 transition-colors"
             >

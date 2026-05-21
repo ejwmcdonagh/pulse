@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ProvocationCard } from "@/lib/api";
+import { dismissCard } from "@/lib/api";
 import CardModal from "./CardModal";
 
 const DOMAIN_SHORT_LABELS: Record<string, string> = {
@@ -82,23 +83,74 @@ export default function ProvocationCardComponent({
   onDismiss: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [dismissing, setDismissing] = useState(false);
 
   const secondaryDomains = (card.metadata.all_domains ?? [])
     .filter((d) => d !== card.risk_domain);
+
+  async function handleConfirmDismiss(e: React.MouseEvent) {
+    e.stopPropagation();
+    setDismissing(true);
+    try {
+      await dismissCard(card.id);
+      onDismiss(card.id);
+    } catch {
+      setDismissing(false);
+      setConfirming(false);
+    }
+  }
 
   return (
     <>
       <article
         role="button"
         tabIndex={0}
-        onClick={() => setOpen(true)}
-        onKeyDown={(e) => e.key === "Enter" && setOpen(true)}
-        className={`cursor-pointer rounded-lg border bg-white p-4 shadow-sm flex flex-col h-72 hover:shadow-md transition-all ${
+        onClick={() => !confirming && setOpen(true)}
+        onKeyDown={(e) => e.key === "Enter" && !confirming && setOpen(true)}
+        className={`relative cursor-pointer rounded-lg border bg-white p-4 shadow-sm flex flex-col h-72 hover:shadow-md transition-all ${
           highlighted
             ? "border-amber-400 ring-1 ring-amber-300"
             : "border-zinc-200 hover:border-zinc-400"
         }`}
       >
+        {/* Dismiss X button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setConfirming(true); }}
+          aria-label="Dismiss card"
+          className="absolute top-2 right-2 z-10 rounded p-1 text-zinc-300 hover:text-zinc-500 hover:bg-zinc-100 transition-colors"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+
+        {/* Inline confirmation overlay */}
+        {confirming && (
+          <div
+            className="absolute inset-0 z-20 rounded-lg bg-white/95 flex flex-col items-center justify-center gap-3 p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-medium text-zinc-800 text-center">Dismiss this card?</p>
+            <p className="text-xs text-zinc-500 text-center leading-relaxed">It will be archived and won't appear again unless new signals come in.</p>
+            <div className="flex gap-2 mt-1">
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirming(false); }}
+                className="rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDismiss}
+                disabled={dismissing}
+                className="rounded-md bg-zinc-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700 disabled:opacity-50 transition-colors"
+              >
+                {dismissing ? "Dismissing..." : "Yes, dismiss"}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col gap-2 flex-1 min-h-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -109,7 +161,7 @@ export default function ProvocationCardComponent({
                 </span>
               )}
             </div>
-            <span className="text-xs text-zinc-400 tabular-nums shrink-0">
+            <span className="text-xs text-zinc-400 tabular-nums shrink-0 pr-4">
               {new Date(card.generated_at).toLocaleDateString("en-GB", {
                 day: "numeric", month: "short",
               })}

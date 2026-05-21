@@ -33,7 +33,8 @@ async def list_cards(
     risk_domain: Annotated[RiskDomain | None, Query()] = None,
     status: Annotated[str | None, Query()] = None,
     min_score: Annotated[float | None, Query(ge=0)] = None,
-    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    before: Annotated[str | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
     """
@@ -41,14 +42,15 @@ async def list_cards(
 
     Filters:
     - risk_domain: narrow to a specific domain
-    - status: 'active' | 'archived'
+    - status: 'active' | 'archived' (default: active)
     - min_score: only return cards above this score threshold
+    - before: ISO date string - only cards generated before this date
     """
     db = get_db()
     query = (
         db.table("provocation_cards")
         .select("*")
-        .order("score", desc=True)
+        .order("generated_at", desc=True)
         .range(offset, offset + limit - 1)
     )
 
@@ -60,6 +62,8 @@ async def list_cards(
         query = query.eq("status", "active")
     if min_score is not None:
         query = query.gte("score", min_score)
+    if before:
+        query = query.lte("generated_at", before)
 
     result = query.execute()
     return {"cards": result.data, "offset": offset, "limit": limit}
