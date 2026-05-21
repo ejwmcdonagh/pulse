@@ -98,7 +98,7 @@ GoogleThreatIntelIngester = ResearchFeedIngester(
 
 Horizon3Ingester = ResearchFeedIngester(
     source=SignalSource.HORIZON3,
-    feed_url="https://www.horizon3.ai/feed/",
+    feed_url="https://horizon3.ai/feed/",
 )
 
 DarkReadingIngester = ResearchFeedIngester(
@@ -108,5 +108,5 @@ DarkReadingIngester = ResearchFeedIngester(
 
 CrowdStrikeIngester = ResearchFeedIngester(
     source=SignalSource.CROWDSTRIKE,
-    feed_url="https://www.crowdstrike.com/en-us/blog/feed/",
+    feed_url="https://www.crowdstrike.com/en-us/blog/feed",
 )
