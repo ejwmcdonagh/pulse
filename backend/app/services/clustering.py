@@ -29,7 +29,7 @@ import anthropic
 
 from app.config import settings
 from app.db.client import get_db
-from app.models.enums import Severity
+from app.models.enums import RiskDomain, Severity
 
 logger = logging.getLogger(__name__)
 
@@ -247,6 +247,12 @@ async def run_clustering() -> int:
     """
     Entry point called by the scheduler and the manual API trigger.
     Returns the number of new clusters written to the DB.
+
+    Runs one LLM call per risk domain (6 total) rather than one giant call.
+    Each domain gets 30-80 focused signals instead of 500+ diverse ones,
+    which gives the model a much better chance of finding genuine convergence.
+    Signals tagged for multiple domains appear in each relevant batch but can
+    only be claimed by the first cluster that includes them.
     """
     if not settings.anthropic_api_key:
         logger.warning("ANTHROPIC_API_KEY not set - skipping clustering run")
@@ -255,7 +261,7 @@ async def run_clustering() -> int:
     db = get_db()
     window_start = (datetime.now(UTC) - timedelta(days=settings.clustering_window_days)).isoformat()
 
-    # Fetch recent signals - condensed to the fields the LLM needs
+    # Fetch all signals in window once - partitioned by domain in Python below
     result = (
         db.table("signals")
         .select("id, source, title, summary, severity, risk_domains, published_at, signal_type")
@@ -269,24 +275,60 @@ async def run_clustering() -> int:
         logger.info("Clustering skipped - fewer than 2 signals in window")
         return 0
 
-    # Exclude signals already assigned to an active cluster
     existing_ids = _already_clustered_ids(db, [s["id"] for s in all_signals])
-    signals = [s for s in all_signals if s["id"] not in existing_ids]
+    unclustered = [s for s in all_signals if s["id"] not in existing_ids]
 
-    if len(signals) < 2:
+    if not unclustered:
         logger.info("Clustering skipped - all recent signals already clustered")
         return 0
 
-    logger.info("Running clustering on %d signals (window: %d days)", len(signals), settings.clustering_window_days)
+    logger.info(
+        "Clustering %d unclustered signals across %d domains (window: %d days)",
+        len(unclustered), len(RiskDomain), settings.clustering_window_days,
+    )
 
-    # Build the signal list we'll hand to Claude - strip raw_data to keep tokens down
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    total_written = 0
+
+    for domain in RiskDomain:
+        # Each domain gets its full unclustered signal pool independently.
+        # Signals tagged for multiple domains appear in each relevant batch - a
+        # CVE affecting both identity and vulnerability domains is genuinely
+        # relevant in both lanes. The next run's _already_clustered_ids check
+        # prevents re-processing signals that end up in clusters.
+        domain_signals = [
+            s for s in unclustered
+            if domain.value in (s.get("risk_domains") or [])
+        ]
+
+        if not domain_signals:
+            logger.info("Domain %s: no unclustered signals, skipping", domain.value)
+            continue
+
+        written, _ = await _cluster_domain(db, client, domain, domain_signals)
+        total_written += written
+
+    logger.info("Clustering complete: %d new clusters written", total_written)
+    return total_written
+
+
+async def _cluster_domain(
+    db: Any,
+    client: anthropic.Anthropic,
+    domain: "RiskDomain",
+    signals: list[dict[str, Any]],
+) -> tuple[int, set[str]]:
+    """
+    Run one clustering LLM call for a single domain.
+    Returns (clusters_written, set_of_claimed_signal_ids).
+    """
     signal_list = [
         {
             "index": i,
             "id": s["id"],
             "source": s["source"],
             "title": s["title"],
-            "summary": (s.get("summary") or "")[:250],  # cap per-signal token cost
+            "summary": (s.get("summary") or "")[:250],
             "severity": s.get("severity"),
             "risk_domains": s.get("risk_domains", []),
             "published_at": s.get("published_at"),
@@ -294,53 +336,53 @@ async def run_clustering() -> int:
         for i, s in enumerate(signals)
     ]
 
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    logger.info("Domain %s: clustering %d signals", domain.value, len(signals))
 
-    response = client.messages.create(
-        # To switch to Opus, replace the model string and uncomment the thinking line.
-        # Thinking is not supported on Haiku - only uncomment it when using Opus.
-        model="claude-haiku-4-5-20251001",
-        # model="claude-opus-4-7",
-        # thinking={"type": "adaptive"},
-        max_tokens=2048,
-        system=_SYSTEM_PROMPT,
-        tools=[_CLUSTER_TOOL],
-        # Force tool use so we always get structured output, never a text refusal
-        tool_choice={"type": "tool", "name": "record_signal_clusters"},
-        messages=[
-            {
-                "role": "user",
-                "content": (
-                    f"Here are {len(signal_list)} cybersecurity signals from the last "
-                    f"{settings.clustering_window_days} days. Identify any convergence patterns.\n\n"
-                    f"Signals:\n{json.dumps(signal_list, separators=(',', ':'))}"
-                ),
-            }
-        ],
-    )
+    try:
+        response = client.messages.create(
+            # Haiku handles domain-batched clustering well (50-80 signals per call).
+            # Switch to Opus below for higher quality at ~10x cost.
+            model="claude-haiku-4-5-20251001",
+            # model="claude-opus-4-7",
+            max_tokens=2048,
+            system=_SYSTEM_PROMPT,
+            tools=[_CLUSTER_TOOL],
+            tool_choice={"type": "tool", "name": "record_signal_clusters"},
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        f"Here are {len(signal_list)} cybersecurity signals from the last "
+                        f"{settings.clustering_window_days} days in the "
+                        f"{domain.value.replace('_', ' ')} risk domain. "
+                        f"Identify any convergence patterns.\n\n"
+                        f"Signals:\n{json.dumps(signal_list, separators=(',', ':'))}"
+                    ),
+                }
+            ],
+        )
+    except Exception:
+        logger.exception("Clustering API call failed for domain %s", domain.value)
+        return 0, set()
 
-    # Extract the tool_use block - forced tool choice means it will always be there
-    tool_use_block = next(
-        (b for b in response.content if b.type == "tool_use"),
-        None,
-    )
+    tool_use_block = next((b for b in response.content if b.type == "tool_use"), None)
     if not tool_use_block:
-        logger.warning("Clustering: no tool_use block in response")
-        return 0
+        logger.warning("Domain %s: no tool_use block in response", domain.value)
+        return 0, set()
 
     clusters_data: list[dict[str, Any]] = tool_use_block.input.get("clusters", [])
     if not clusters_data:
-        logger.info("Clustering: model found no convergence patterns in this window")
-        return 0
+        logger.info("Domain %s: model found no convergence patterns", domain.value)
+        return 0, set()
 
-    # Build and persist cluster rows
     written = 0
+    claimed: set[str] = set()
+
     for cluster_def in clusters_data:
         indices: list[int] = cluster_def.get("signal_indices", [])
         if not indices:
             continue
 
-        # Guard against out-of-range indices from the model
         valid_signals = [signals[i] for i in indices if i < len(signals)]
         if not valid_signals:
             continue
@@ -374,6 +416,7 @@ async def run_clustering() -> int:
         }
 
         db.table("signal_clusters").insert(row).execute()
+        claimed.update(s["id"] for s in valid_signals)
         written += 1
         logger.info(
             "Cluster written: domain=%s score=%.1f signals=%d sources=%d",
@@ -383,5 +426,4 @@ async def run_clustering() -> int:
             len({s["source"] for s in valid_signals}),
         )
 
-    logger.info("Clustering complete: %d new clusters written", written)
-    return written
+    return written, claimed
