@@ -195,7 +195,9 @@ export default function CardModal({ card, onClose, simpleMode = false }: Props) 
               </span>
             </div>
             <h2 className="text-lg font-semibold text-zinc-900 leading-snug">
-              {card.signal_headline}
+              {simpleMode && card.simple_headline
+                ? card.simple_headline
+                : card.signal_headline}
             </h2>
             {card.affected_teams?.length > 0 && (
               <div className="flex flex-col gap-1.5">

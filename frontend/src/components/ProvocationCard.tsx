@@ -115,12 +115,12 @@ export default function ProvocationCardComponent({
           </div>
           <p className="text-sm font-semibold leading-snug text-zinc-900 line-clamp-3">
             {simpleMode
-              ? card.board_talking_point.split(/(?<=[.!?])\s+/)[0]
+              ? (card.simple_headline ?? card.board_talking_point.split(/(?<=[.!?])\s+/)[0])
               : card.signal_headline}
           </p>
           <p className="text-xs text-zinc-500 line-clamp-3">
             {simpleMode
-              ? card.board_talking_point.split(/(?<=[.!?])\s+/).slice(1, 3).join(" ")
+              ? card.board_talking_point.split(/(?<=[.!?])\s+/).slice(0, 2).join(" ")
               : card.metadata.cluster_summary}
           </p>
         </div>

@@ -58,11 +58,23 @@ _CARD_TOOL: dict[str, Any] = {
                 "type": "string",
                 "description": "2-3 sentences on which regulations make this risk commercially consequential. Frame as: exposes the org to [consequence] under [framework]. Use: NIS2, UK GDPR, DORA, FCA SYSC 13, ISO 27001.",
             },
+            "simple_headline": {
+                "type": "string",
+                "description": (
+                    "One sentence, max 15 words, for a non-technical board director or CFO. "
+                    "Explain the real-world risk in plain English with zero technical terms. "
+                    "No CVE numbers, no product names, no vulnerability class names (no 'authentication bypass', "
+                    "'SQL injection', 'RCE', 'buffer overflow', 'XSS', 'privilege escalation', etc.). "
+                    "Write what could go wrong for the business, not what the flaw is. "
+                    "Example: 'Attackers can log into critical systems without a password and take full control.'"
+                ),
+            },
             "board_talking_point": {
                 "type": "string",
                 "description": (
                     "3-4 sentences for non-technical board directors. "
-                    "(1) What is happening in plain English - no jargon, no CVE numbers; "
+                    "(1) What is happening in plain English - no CVE numbers, no technical class names "
+                    "(say 'attackers can log in without a password' not 'authentication bypass'); "
                     "(2) specific business consequence - real fine figure, insurance denial, or revenue impact; "
                     "(3) one action the board needs to approve. "
                     "Active voice. Short sentences. Write like a CFO, not an engineer."
@@ -76,6 +88,7 @@ _CARD_TOOL: dict[str, Any] = {
         },
         "required": [
             "signal_headline",
+            "simple_headline",
             "evidence_stack",
             "contextual_question",
             "compliance_gap",
@@ -232,6 +245,7 @@ async def _generate_one(db: Any, client: anthropic.Anthropic, cluster: dict[str,
     card_row = {
         "cluster_id": cluster_id,
         "signal_headline": card_input["signal_headline"],
+        "simple_headline": card_input.get("simple_headline"),
         "evidence_stack": evidence_stack,
         "compliance_gap": card_input["compliance_gap"],
         "contextual_question": card_input["contextual_question"],

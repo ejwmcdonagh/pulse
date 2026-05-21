@@ -26,6 +26,7 @@ export type ProvocationCard = {
   compliance_gap: string;
   contextual_question: string;
   board_talking_point: string;
+  simple_headline?: string;
   affected_teams: string[];
   risk_domain: string;
   score: number;
