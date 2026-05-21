@@ -102,8 +102,8 @@ Install each of these before going any further.
 Open a terminal. On Mac that is the Terminal app. On Windows that is PowerShell (search for it in the Start menu).
 
 ```bash
-git clone https://github.com/ejwmcdonagh/risk-reg-radar.git
-cd risk-reg-radar
+git clone https://github.com/ejwmcdonagh/pulse.git
+cd pulse
 ```
 
 If you do not have Git installed, download it from [git-scm.com](https://git-scm.com/).
@@ -402,7 +402,7 @@ You have hit the 60 requests/hour unauthenticated limit. Either wait an hour and
 ## Project structure
 
 ```
-risk-reg-radar/
+pulse/
 ├── backend/                  # Python API and data pipeline
 │   ├── app/
 │   │   ├── ingestion/        # One file per data source
