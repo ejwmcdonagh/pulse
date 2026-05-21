@@ -324,6 +324,32 @@ Then restart the backend. The pipeline will run every day at 08:00 UTC.
 
 ---
 
+## How the signal window works
+
+This is important to understand before you run the pipeline.
+
+**Signals are stored permanently.** Every time you run an ingest command, signals are written to the database and kept there. Nothing is ever deleted automatically.
+
+**Clustering only looks at the last 30 days.** When you run `clusters/run`, it ignores any signal older than 30 days. Those older signals stay in the database but will never appear in a cluster or card unless you extend the window.
+
+**Dismissed cards stay dismissed.** If you dismiss a card from the board, its signals are permanently excluded from future clustering runs. The same threat will not return unless new signals come in after the dismissal.
+
+**What this means in practice:**
+
+- If you run the pipeline daily, you will always see a fresh view of the last 30 days of threat activity.
+- If you stop running the pipeline for a month and start again, you will only see clusters built from the last 30 days. The gap in between is lost from the board view but still stored in the database.
+- On your first ever run, the 30-day window is applied to whatever signals have been ingested. CISA KEV pulls its full catalogue (thousands of entries going back years), so you may see clusters from older vulnerabilities on day one. Every other source only fetches recent items.
+
+**To change the window**, add this to `backend/.env` and restart the backend:
+
+```
+CLUSTERING_WINDOW_DAYS=60
+```
+
+Increasing the window means more signals are considered per run and clustering will take longer and cost slightly more. The default of 30 days is a good balance for daily use.
+
+---
+
 ## Customising your feed
 
 Go to `http://localhost:3000` and click **Customize your feed** in the top right.

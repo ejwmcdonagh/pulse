@@ -2,7 +2,7 @@
 Signal combination detection - Step 2 of the Regulatory Radar build sequence.
 
 Approach:
-- Pull signals from the last N days (configurable, default 7)
+- Pull signals from the last N days (configurable via CLUSTERING_WINDOW_DAYS, default 30)
 - Skip signals already assigned to a cluster in this window
 - Send a condensed signal list to Claude and ask it to identify convergence patterns
 - Score each cluster using an additive model (see _score below)
