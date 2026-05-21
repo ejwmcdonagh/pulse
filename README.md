@@ -327,15 +327,17 @@ thinking={"type": "adaptive"},
 
 Note: `thinking` only works with Opus. If you switch back to Haiku, comment it out again or the API will return an error.
 
-### Approximate costs per full pipeline run
+### Approximate costs per pipeline run
 
-These are based on a corpus of around 1,000 signals generating roughly 54 cards. Costs scale with corpus size and number of cards.
+Based on actual runs with ~1,000 signals across 8 sources.
 
 | Step | Haiku | Opus |
 |------|-------|------|
-| Clustering (~150k input tokens) | ~$0.15 | ~$0.75 |
-| Card generation (~54 cards) | ~$0.32 | ~$1.62 |
-| **Total** | **~$0.47** | **~$2.37** |
+| Clustering | ~$0.06 | ~$0.30 |
+| Card generation | ~$0.10 | ~$0.50 |
+| **Total** | **~$0.16** | **~$0.80** |
+
+The first run is more expensive because it processes the full signal backlog. Daily incremental runs will cost less as only new signals get clustered.
 
 Token usage per run is logged in the `metadata.usage` field on every cluster and card row in the database, so you can track actual spend over time.
 
