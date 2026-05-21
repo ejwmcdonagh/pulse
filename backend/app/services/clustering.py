@@ -328,7 +328,7 @@ async def _cluster_domain(
             "id": s["id"],
             "source": s["source"],
             "title": s["title"],
-            "summary": (s.get("summary") or "")[:250],
+            "summary": (s.get("summary") or "")[:400],
             "severity": s.get("severity"),
             "risk_domains": s.get("risk_domains", []),
             "published_at": s.get("published_at"),
@@ -344,7 +344,7 @@ async def _cluster_domain(
             # Switch to Opus below for higher quality at ~10x cost.
             model="claude-haiku-4-5-20251001",
             # model="claude-opus-4-7",
-            max_tokens=2048,
+            max_tokens=4096,
             system=_SYSTEM_PROMPT,
             tools=[_CLUSTER_TOOL],
             tool_choice={"type": "tool", "name": "record_signal_clusters"},
