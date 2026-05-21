@@ -197,23 +197,32 @@ export default function CardModal({ card, onClose }: Props) {
               {card.signal_headline}
             </h2>
             {card.affected_teams?.length > 0 && (
-              <div className="flex gap-1.5 flex-wrap">
-                {card.affected_teams.map((team) => (
-                  <button
-                    key={team}
-                    onClick={() => setActiveTeam(activeTeam === team ? null : team)}
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                      activeTeam === team
-                        ? "bg-zinc-800 text-white"
-                        : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-                    }`}
-                  >
-                    {team}
-                  </button>
-                ))}
-                {activeTeam && (
-                  <span className="text-xs text-zinc-400 self-center">click to close</span>
-                )}
+              <div className="flex flex-col gap-1.5">
+                <p className="text-xs text-zinc-400">
+                  Teams affected — click for impact summary
+                </p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {card.affected_teams.map((team) => (
+                    <button
+                      key={team}
+                      onClick={() => setActiveTeam(activeTeam === team ? null : team)}
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                        activeTeam === team
+                          ? "bg-zinc-800 text-white"
+                          : "border border-zinc-300 text-zinc-600 hover:border-zinc-500 hover:bg-zinc-50"
+                      }`}
+                    >
+                      {activeTeam !== team && (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-50">
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="12" y1="8" x2="12" y2="12" />
+                          <line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                      )}
+                      {team}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
