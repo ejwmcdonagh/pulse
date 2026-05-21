@@ -31,7 +31,7 @@ Every day the system:
 3. Scores each group by severity, recency, and how many sources agree
 4. Writes a card for every group above the score threshold
 
-You can turn any source on or off, add your own RSS feeds, and tell it which technologies your organisation uses. Cards that mention your tech stack float to the top.
+You can turn any source on or off, add your own RSS feeds, and tell it which technologies your organisation uses. Cards that mention your tech stack float to the top. You can also filter the board by security team (IAM, SOC, AppSec, and others) to focus on what is relevant to a specific group.
 
 ### Built-in sources
 
@@ -421,7 +421,7 @@ reg-radar/
 - [x] Step 1 - Pull threat data from CISA, NVD, NCSC
 - [x] Step 2 - Group related signals into clusters
 - [x] Step 3 - Generate 5-layer intelligence cards using AI
-- [x] Step 4 - Dashboard with six domain lanes, card modal, tech stack highlighting
+- [x] Step 4 - Dashboard with six domain lanes, card modal, tech stack highlighting, team filter, and per-team AI impact summaries
 - [ ] Step 5 - Connect to your SIEM or ticketing system
 - [ ] Step 6 - Weekly email digest
 - [ ] Step 7 - Onboarding flow for new organisations

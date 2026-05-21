@@ -77,7 +77,7 @@ export default function ProvocationCardComponent({
         tabIndex={0}
         onClick={() => setOpen(true)}
         onKeyDown={(e) => e.key === "Enter" && setOpen(true)}
-        className={`cursor-pointer rounded-lg border bg-white p-4 shadow-sm flex flex-col justify-between h-44 hover:shadow-md transition-all ${
+        className={`cursor-pointer rounded-lg border bg-white p-4 shadow-sm flex flex-col justify-between h-56 hover:shadow-md transition-all ${
           highlighted
             ? "border-amber-400 ring-1 ring-amber-300"
             : "border-zinc-200 hover:border-zinc-400"
@@ -102,12 +102,12 @@ export default function ProvocationCardComponent({
           <p className="text-sm font-semibold leading-snug text-zinc-900 line-clamp-3">
             {card.signal_headline}
           </p>
-          <p className="text-xs text-zinc-500 line-clamp-2">
+          <p className="text-xs text-zinc-500 line-clamp-3">
             {card.metadata.cluster_summary}
           </p>
         </div>
         {card.affected_teams?.length > 0 && (
-          <div className="flex gap-1 flex-wrap">
+          <div className="flex gap-1 flex-wrap mt-2">
             {card.affected_teams.map((team) => (
               <span key={team} className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500">
                 {team}
