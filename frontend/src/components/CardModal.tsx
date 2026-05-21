@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ProvocationCard, EvidenceItem } from "@/lib/api";
+import { fetchTeamSummary } from "@/lib/api";
 
 type Props = {
   card: ProvocationCard;
@@ -119,7 +120,39 @@ function ExecSummary({ card }: { card: ProvocationCard }) {
   );
 }
 
+function TeamSummarySection({ cardId, team }: { cardId: string; team: string }) {
+  const [summary, setSummary] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    fetchTeamSummary(cardId, team)
+      .then((s) => setSummary(s))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [cardId, team]);
+
+  return (
+    <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
+      <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-2">
+        Impact on {team}
+      </p>
+      {loading && (
+        <p className="text-xs text-zinc-400 animate-pulse">Generating...</p>
+      )}
+      {error && (
+        <p className="text-xs text-red-500">Could not generate summary.</p>
+      )}
+      {summary && (
+        <p className="text-sm text-zinc-700 leading-relaxed">{summary}</p>
+      )}
+    </div>
+  );
+}
+
 export default function CardModal({ card, onClose }: Props) {
+  const [activeTeam, setActiveTeam] = useState<string | null>(null);
+
   // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -166,10 +199,21 @@ export default function CardModal({ card, onClose }: Props) {
             {card.affected_teams?.length > 0 && (
               <div className="flex gap-1.5 flex-wrap">
                 {card.affected_teams.map((team) => (
-                  <span key={team} className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600">
+                  <button
+                    key={team}
+                    onClick={() => setActiveTeam(activeTeam === team ? null : team)}
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                      activeTeam === team
+                        ? "bg-zinc-800 text-white"
+                        : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                    }`}
+                  >
                     {team}
-                  </span>
+                  </button>
                 ))}
+                {activeTeam && (
+                  <span className="text-xs text-zinc-400 self-center">click to close</span>
+                )}
               </div>
             )}
           </div>
@@ -189,6 +233,11 @@ export default function CardModal({ card, onClose }: Props) {
 
           {/* Exec summary */}
           <ExecSummary card={card} />
+
+          {/* Team-specific impact - shown when a team badge is clicked */}
+          {activeTeam && (
+            <TeamSummarySection key={activeTeam} cardId={card.id} team={activeTeam} />
+          )}
 
           {/* Layer 2: Evidence */}
           <EvidenceSection items={card.evidence_stack} />

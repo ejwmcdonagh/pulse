@@ -106,3 +106,14 @@ export async function fetchBuiltinSources(): Promise<BuiltinSource[]> {
   const data = await res.json();
   return data.sources ?? [];
 }
+
+export async function fetchTeamSummary(cardId: string, team: string): Promise<string> {
+  const res = await fetch(`${API_BASE}/api/cards/${cardId}/team-summary`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ team }),
+  });
+  if (!res.ok) throw new Error(`Failed to fetch team summary: ${res.status}`);
+  const data = await res.json();
+  return data.summary ?? "";
+}

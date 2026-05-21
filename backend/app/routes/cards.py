@@ -1,7 +1,10 @@
 from typing import Annotated
 
+import anthropic
 from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 
+from app.config import settings
 from app.db.client import get_db
 from app.models.enums import RiskDomain
 from app.services.card_generator import generate_cards
@@ -70,3 +73,45 @@ async def get_card(card_id: str):
     if not result.data:
         raise HTTPException(status_code=404, detail="Card not found")
     return result.data
+
+
+class TeamSummaryRequest(BaseModel):
+    team: str
+
+
+@router.post("/{card_id}/team-summary")
+async def get_team_summary(card_id: str, body: TeamSummaryRequest):
+    """
+    Generate a short summary of how this card's risk specifically affects the given team.
+    Called on demand when a user clicks a team badge in the card modal.
+    """
+    if not settings.anthropic_api_key:
+        raise HTTPException(status_code=503, detail="Anthropic API key not configured")
+
+    db = get_db()
+    result = db.table("provocation_cards").select("*").eq("id", card_id).single().execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Card not found")
+
+    card = result.data
+    evidence_titles = ", ".join(e["source"] for e in (card.get("evidence_stack") or [])[:4])
+
+    prompt = (
+        f"Risk card: {card['signal_headline']}\n"
+        f"Risk domain: {card['risk_domain']}\n"
+        f"Summary: {card['metadata'].get('cluster_summary', '')}\n"
+        f"Sources: {evidence_titles}\n\n"
+        f"In 2-3 plain sentences, explain specifically how this risk affects the {body.team} team "
+        f"and what they should do or check. Write directly for that team, not for a general audience. "
+        f"Be concrete - name the likely systems, processes, or responsibilities involved. No jargon acronyms."
+    )
+
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    response = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=256,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    summary = response.content[0].text.strip() if response.content else ""
+    return {"team": body.team, "summary": summary}
