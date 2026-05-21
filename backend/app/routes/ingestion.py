@@ -1,7 +1,7 @@
 """
 Manual ingestion trigger endpoints.
 
-These are primarily for development and operational use — not part of the
+These are primarily for development and operational use - not part of the
 user-facing product. They let you kick off a source run on demand rather
 than waiting for the scheduler, which is useful when testing a new ingester
 or recovering from a failed scheduled run.
@@ -19,7 +19,7 @@ from app.models.enums import SignalSource
 router = APIRouter(prefix="/api/ingest", tags=["ingestion"])
 
 # Registry maps source enum values to ingester instances.
-# Adding a new source requires only adding it here — the route handler is generic.
+# Adding a new source requires only adding it here - the route handler is generic.
 _INGESTERS = {
     SignalSource.CISA_KEV: CisaKevIngester(),
     SignalSource.CISA_ADVISORY: CisaAdvisoriesIngester(),

@@ -1,12 +1,12 @@
 """
-Domain mapping — assigns risk domains to signals based on keyword matching.
+Domain mapping - assigns risk domains to signals based on keyword matching.
 
 Intentionally simple for V1: keyword sets over text fields.
 This will be replaced or augmented with LLM-based classification once we
 have enough real signals to evaluate quality, but keyword matching gives us
 deterministic, auditable results during early development.
 
-Signals can belong to multiple domains — a credential CVE is both
+Signals can belong to multiple domains - a credential CVE is both
 identity_credential and vulnerability_patch.
 """
 

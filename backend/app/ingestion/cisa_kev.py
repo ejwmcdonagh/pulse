@@ -5,7 +5,7 @@ Source: https://www.cisa.gov/known-exploited-vulnerabilities-catalog
 Feed:   https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
 
 The KEV catalog is CISA's authoritative list of CVEs with confirmed real-world
-exploitation. It's a high signal-to-noise source — every entry represents a
+exploitation. It's a high signal-to-noise source - every entry represents a
 vulnerability that attackers are actively using, not just theoretically dangerous.
 
 This is intentionally one of the first sources in V1 because the CVE IDs here
@@ -51,7 +51,7 @@ class CisaKevIngester(BaseIngester):
         title = f"{cve_id}: {entry.get('vulnerabilityName', '')}"
         summary = entry.get("shortDescription", "")
 
-        # Ransomware flag is explicit in KEV data — use it to seed domain mapping
+        # Ransomware flag is explicit in KEV data - use it to seed domain mapping
         # rather than relying solely on keyword matching
         tags: list[str] = []
         if entry.get("knownRansomwareCampaignUse", "").lower() == "known":

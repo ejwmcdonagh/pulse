@@ -4,7 +4,7 @@ CISA Cybersecurity Advisories ingester.
 Source: https://www.cisa.gov/cybersecurity-advisories
 Feed:   https://www.cisa.gov/cybersecurity-advisories/all.xml  (RSS 2.0)
 
-CISA advisories are richer than KEV entries — they describe attack campaigns,
+CISA advisories are richer than KEV entries - they describe attack campaigns,
 TTPs, and mitigations, not just individual CVEs. They're the primary source for
 multi-signal cards involving threat actor behaviour (e.g. an AiTM phishing
 advisory combined with an insurance questionnaire update).
@@ -53,7 +53,7 @@ class CisaAdvisoriesIngester(BaseIngester):
             except Exception:
                 pass
 
-        # CISA advisory IDs follow the pattern AA25-XXX — extract from the URL
+        # CISA advisory IDs follow the pattern AA25-XXX - extract from the URL
         # slug so we get a stable source_id even if the title changes
         source_id = link.rstrip("/").split("/")[-1] if link else title[:100]
 

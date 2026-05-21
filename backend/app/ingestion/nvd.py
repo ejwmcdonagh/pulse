@@ -5,7 +5,7 @@ Source: https://nvd.nist.gov/
 API:    https://services.nvd.nist.gov/rest/json/cves/2.0
 
 We pull CRITICAL severity CVEs published in the last 30 days. The 30-day window
-is intentional — it's long enough to catch slow-burning issues while keeping
+is intentional - it's long enough to catch slow-burning issues while keeping
 the signal volume manageable. The NVD API supports date range filtering so we
 don't have to pull the full database.
 
@@ -99,7 +99,7 @@ class NvdIngester(BaseIngester):
                 if start_index >= total:
                     break
 
-                # Respect rate limits — sleep longer if no key is configured
+                # Respect rate limits - sleep longer if no key is configured
                 sleep_s = 0.5 if settings.nvd_api_key else UNAUTHENTICATED_SLEEP
                 await asyncio.sleep(sleep_s)
 
@@ -117,7 +117,7 @@ class NvdIngester(BaseIngester):
         score = _cvss_score(cve)
         severity = _severity(score)
 
-        # Pull CVE references as tags — source URLs, vendor bulletins etc.
+        # Pull CVE references as tags - source URLs, vendor bulletins etc.
         ref_tags = [r.get("source", "") for r in cve.get("references", []) if r.get("source")]
 
         return Signal(

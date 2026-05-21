@@ -1,5 +1,5 @@
 """
-Signal combination detection — Step 2 of the Regulatory Radar build sequence.
+Signal combination detection - Step 2 of the Regulatory Radar build sequence.
 
 Approach:
 - Pull signals from the last N days (configurable, default 7)
@@ -16,7 +16,7 @@ not just matching isolated keywords. Claude handles that comparison well.
 
 Why tool use for the LLM call?
 Tool use forces the model to return structured data with a predictable schema.
-Asking for JSON in a free-text response is fragile — minor formatting differences
+Asking for JSON in a free-text response is fragile - minor formatting differences
 cause parse errors. With tool use, the SDK validates the schema before we receive it.
 """
 
@@ -47,7 +47,7 @@ _CLUSTER_TOOL: dict[str, Any] = {
     "name": "record_signal_clusters",
     "description": (
         "Record the groups of signals that converge on the same specific threat vector. "
-        "Only group signals that share a concrete underlying cause — same CVE class, "
+        "Only group signals that share a concrete underlying cause - same CVE class, "
         "same threat actor, same misconfiguration type. Broad domain overlap alone is "
         "not enough. If no genuine convergence exists, return an empty clusters array."
     ),
@@ -86,7 +86,7 @@ _CLUSTER_TOOL: dict[str, Any] = {
                         "cluster_summary": {
                             "type": "string",
                             "description": (
-                                "One sentence describing what is happening right now — "
+                                "One sentence describing what is happening right now - "
                                 "present tense, direct, no jargon"
                             ),
                         },
@@ -111,8 +111,8 @@ _CLUSTER_TOOL: dict[str, Any] = {
 }
 
 _SYSTEM_PROMPT = """You are a threat intelligence analyst. You will be given a list of recent
-cybersecurity signals — vulnerability disclosures, threat advisories, and known-exploited
-vulnerability entries — and asked to identify convergence patterns.
+cybersecurity signals - vulnerability disclosures, threat advisories, and known-exploited
+vulnerability entries - and asked to identify convergence patterns.
 
 Your job is to find groups of signals that are pointing at the same underlying threat.
 A genuine cluster has signals that share a common cause: the same CVE, the same exploit
@@ -123,7 +123,7 @@ Do not group signals just because they share a broad category like "ransomware" 
 "vulnerabilities". The threshold for a multi-signal cluster is: would a CISO reading these
 signals together have reason to believe they represent a single developing story?
 
-Single-signal clusters are allowed when a signal is significant enough to stand alone —
+Single-signal clusters are allowed when a signal is significant enough to stand alone -
 for example: a confirmed ransomware campaign advisory, an NCSC alert with no related signals,
 or a critical actively-exploited CVE with no peer signals. Use single-signal clusters
 sparingly and only for genuinely high-importance signals.
@@ -228,7 +228,7 @@ def _already_clustered_ids(db: Any, signal_ids: list[str]) -> set[str]:
 
     # PostgREST doesn't expose the && operator directly, so we fetch all
     # active cluster rows and filter in Python. This is acceptable for V1
-    # because the cluster count is small — revisit with an RPC if it grows.
+    # because the cluster count is small - revisit with an RPC if it grows.
     result = (
         db.table("signal_clusters")
         .select("signal_ids")
@@ -249,13 +249,13 @@ async def run_clustering() -> int:
     Returns the number of new clusters written to the DB.
     """
     if not settings.anthropic_api_key:
-        logger.warning("ANTHROPIC_API_KEY not set — skipping clustering run")
+        logger.warning("ANTHROPIC_API_KEY not set - skipping clustering run")
         return 0
 
     db = get_db()
     window_start = (datetime.now(UTC) - timedelta(days=settings.clustering_window_days)).isoformat()
 
-    # Fetch recent signals — condensed to the fields the LLM needs
+    # Fetch recent signals - condensed to the fields the LLM needs
     result = (
         db.table("signals")
         .select("id, source, title, summary, severity, risk_domains, published_at, signal_type")
@@ -266,7 +266,7 @@ async def run_clustering() -> int:
     all_signals: list[dict[str, Any]] = result.data or []
 
     if len(all_signals) < 2:
-        logger.info("Clustering skipped — fewer than 2 signals in window")
+        logger.info("Clustering skipped - fewer than 2 signals in window")
         return 0
 
     # Exclude signals already assigned to an active cluster
@@ -274,12 +274,12 @@ async def run_clustering() -> int:
     signals = [s for s in all_signals if s["id"] not in existing_ids]
 
     if len(signals) < 2:
-        logger.info("Clustering skipped — all recent signals already clustered")
+        logger.info("Clustering skipped - all recent signals already clustered")
         return 0
 
     logger.info("Running clustering on %d signals (window: %d days)", len(signals), settings.clustering_window_days)
 
-    # Build the signal list we'll hand to Claude — strip raw_data to keep tokens down
+    # Build the signal list we'll hand to Claude - strip raw_data to keep tokens down
     signal_list = [
         {
             "index": i,
@@ -315,7 +315,7 @@ async def run_clustering() -> int:
         ],
     )
 
-    # Extract the tool_use block — forced tool choice means it will always be there
+    # Extract the tool_use block - forced tool choice means it will always be there
     tool_use_block = next(
         (b for b in response.content if b.type == "tool_use"),
         None,

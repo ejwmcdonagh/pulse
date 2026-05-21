@@ -1,7 +1,7 @@
 """
 Database client.
 
-Uses supabase-py, which wraps PostgREST — so this works against any
+Uses supabase-py, which wraps PostgREST - so this works against any
 Postgres instance that has PostgREST in front of it, not just Supabase.
 The service role key bypasses row-level security for backend writes;
 never expose it client-side.

@@ -6,10 +6,10 @@ infers severity from signal text so clustering and card generation have a
 consistent severity signal across all sources.
 
 Priority order: CRITICAL > HIGH > MEDIUM > LOW. The first tier whose keywords
-match wins — we don't accumulate matches across tiers.
+match wins - we don't accumulate matches across tiers.
 
 Why keyword inference rather than leaving severity null?
-Null severity breaks the additive scoring model in clustering — a KEV entry
+Null severity breaks the additive scoring model in clustering - a KEV entry
 confirmed as actively exploited scores the same as a low-noise NVD advisory.
 Keyword inference is imperfect but directionally correct: "actively exploited"
 almost always means the risk is high, regardless of the formal CVSS score.

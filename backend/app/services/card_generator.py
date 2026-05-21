@@ -1,5 +1,5 @@
 """
-Provocation card generator — Step 3 of the Regulatory Radar build sequence.
+Provocation card generator - Step 3 of the Regulatory Radar build sequence.
 
 Takes pending signal clusters above the score threshold and generates a
 5-layer provocation card for each using Claude.
@@ -12,7 +12,7 @@ The 5 layers (from the product brief):
   5. Board talking point - one paragraph the CISO can use almost verbatim
 
 Why tool use for card generation?
-The 5 layers need to arrive as structured fields — the dashboard renders each
+The 5 layers need to arrive as structured fields - the dashboard renders each
 layer differently (headline as h1, evidence as bullets, talking point as prose).
 Tool use guarantees the schema; free-text generation would require brittle parsing.
 
@@ -72,7 +72,7 @@ _CARD_TOOL: dict[str, Any] = {
                     "2-3 sentences identifying which regulatory or audit framework "
                     "this threat falls through. Reference specific frameworks by name "
                     "(NIS2, DORA, GDPR, ISO 27001, Cyber Essentials, FCA SYSC, etc.). "
-                    "Focus on the gap — what the framework requires vs. what this threat exposes."
+                    "Focus on the gap - what the framework requires vs. what this threat exposes."
                 ),
             },
             "contextual_question": {
@@ -88,8 +88,8 @@ _CARD_TOOL: dict[str, Any] = {
                 "type": "string",
                 "description": (
                     "3-4 short sentences a CISO can read almost verbatim to a board of non-technical directors. "
-                    "Structure: (1) what is happening in plain business terms — no technical jargon, no CVE numbers, "
-                    "no product names unless they are household words; (2) what it could cost the business — "
+                    "Structure: (1) what is happening in plain business terms - no technical jargon, no CVE numbers, "
+                    "no product names unless they are household words; (2) what it could cost the business - "
                     "pick the most credible consequence from: regulatory fine with a real ballpark figure, "
                     "insurance claim denial, operational downtime affecting revenue, or customer trust damage; "
                     "(3) what decision or action the board needs to endorse. "
@@ -115,13 +115,13 @@ _CARD_TOOL: dict[str, Any] = {
 
 _SYSTEM_PROMPT = """You are a senior cyber risk advisor who briefs boards of directors at large regulated organisations.
 
-Your audience for the board talking point is a room of non-technical executives — CEOs, CFOs, General Counsels,
-and NEDs — who are legally accountable for risk but have no security background. They think in terms of
+Your audience for the board talking point is a room of non-technical executives - CEOs, CFOs, General Counsels,
+and NEDs - who are legally accountable for risk but have no security background. They think in terms of
 revenue, fines, reputation, and liability. They do not know what a CVE is. They do not know what patching means.
 They do not care about technical details.
 
 For the board talking point specifically:
-- Open with a plain-English description of what is happening in the real world — as if explaining to a CFO
+- Open with a plain-English description of what is happening in the real world - as if explaining to a CFO
 - Make the commercial consequence concrete and credible: a real fine range, a plausible insurance scenario,
   a named operational impact. Do not be vague ("significant financial impact"). Be specific ("fines of up to
   4% of annual turnover under data protection law").
@@ -129,7 +129,7 @@ For the board talking point specifically:
 - Three to four sentences maximum. Short sentences. Active voice.
 - Zero acronyms. Zero technical terms. Zero product names unless they are household words like Microsoft or Google.
 
-For all other layers, you are writing for the CISO — technically literate, regulatory-aware.
+For all other layers, you are writing for the CISO - technically literate, regulatory-aware.
 Reference real frameworks by name: NIS2, UK GDPR, DORA, FCA SYSC 13, ISO 27001, Cyber Essentials, NCSC CAF.
 
 Do not fabricate CVE numbers, vendor names, or specific breach figures beyond what the signals contain."""
@@ -144,7 +144,7 @@ async def generate_cards(cluster_ids: list[str] | None = None) -> int:
     Returns the number of cards written.
     """
     if not settings.anthropic_api_key:
-        logger.warning("ANTHROPIC_API_KEY not set — skipping card generation")
+        logger.warning("ANTHROPIC_API_KEY not set - skipping card generation")
         return 0
 
     db = get_db()
@@ -257,7 +257,7 @@ async def _generate_one(db: Any, client: anthropic.Anthropic, cluster: dict[str,
 
     card_input: dict[str, Any] = tool_block.input
 
-    # Build the evidence stack — use the model's structured output but enrich
+    # Build the evidence stack - use the model's structured output but enrich
     # with the actual signal URLs from the DB which are more reliable
     evidence_stack = card_input.get("evidence_stack", [])
     url_by_title = {s["title"]: s.get("url", "") for s in signal_descriptions}

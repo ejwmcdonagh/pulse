@@ -42,7 +42,7 @@ def create_scheduler() -> AsyncIOScheduler:
             trigger=CronTrigger.from_crontab(cron),
             id=f"ingest_{ingester.source.value}",
             name=f"Ingest {ingester.source.value}",
-            # Coalesce missed runs — if the server was down for several cycles,
+            # Coalesce missed runs - if the server was down for several cycles,
             # run once on startup rather than firing once per missed window
             coalesce=True,
             max_instances=1,
@@ -61,7 +61,7 @@ def create_scheduler() -> AsyncIOScheduler:
     )
     logger.info("Scheduled clustering job: cron=%s", settings.clustering_cron)
 
-    # Card generation runs after clustering — default 09:00 UTC
+    # Card generation runs after clustering - default 09:00 UTC
     scheduler.add_job(
         generate_cards,
         trigger=CronTrigger.from_crontab(settings.card_generation_cron),

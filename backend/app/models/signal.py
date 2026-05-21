@@ -28,7 +28,7 @@ class Signal(BaseModel):
 
 
 class SignalRecord(Signal):
-    """Signal as returned from the DB — includes server-assigned fields."""
+    """Signal as returned from the DB - includes server-assigned fields."""
 
     id: UUID
     ingested_at: datetime

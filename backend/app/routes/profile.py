@@ -57,7 +57,7 @@ async def add_source(body: CustomSourceCreate):
             "url": str(body.url),
         }).execute()
     except Exception as exc:
-        # Unique constraint violation — URL already exists
+        # Unique constraint violation - URL already exists
         raise HTTPException(status_code=409, detail="A source with that URL already exists") from exc
     return result.data[0]
 

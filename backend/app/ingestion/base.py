@@ -27,7 +27,7 @@ class BaseIngester(ABC):
         Fetch signals from the source and persist new ones to the DB.
         Returns the count of newly inserted signals.
 
-        Records a row in ingestion_runs for every execution — success or failure —
+        Records a row in ingestion_runs for every execution - success or failure -
         so operators can audit exactly when each source was last polled.
         """
         db = get_db()
@@ -81,7 +81,7 @@ class BaseIngester(ABC):
         """
         Insert signals, ignoring rows that already exist (same source + source_id).
         We use ignore_duplicates rather than an update because once a signal is
-        ingested its raw_data should be treated as immutable — card generation
+        ingested its raw_data should be treated as immutable - card generation
         may already reference it. If the source corrects a record, it'll get
         a new source_id.
         """
@@ -91,7 +91,7 @@ class BaseIngester(ABC):
         rows = [
             {
                 **s.model_dump(mode="json"),
-                # Supabase-py sends arrays as Python lists — Postgres accepts them fine,
+                # Supabase-py sends arrays as Python lists - Postgres accepts them fine,
                 # but JSONB columns need explicit serialisation
                 "risk_domains": [d.value for d in s.risk_domains],
             }

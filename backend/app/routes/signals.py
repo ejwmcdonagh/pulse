@@ -18,7 +18,7 @@ async def list_signals(
     """
     List signals with optional filtering.
 
-    risk_domain uses a Postgres array containment check (@>) — it matches any
+    risk_domain uses a Postgres array containment check (@>) - it matches any
     signal whose risk_domains array contains the requested domain, not an
     exact equality match. A signal tagged [identity_credential, vulnerability_patch]
     will be returned when filtering by either domain.
@@ -39,7 +39,7 @@ async def list_signals(
 @router.get("/stats")
 async def signal_stats():
     """
-    Counts grouped by source and risk domain — used by the dashboard to
+    Counts grouped by source and risk domain - used by the dashboard to
     populate domain swim-lane headers before card data is loaded.
     """
     db = get_db()

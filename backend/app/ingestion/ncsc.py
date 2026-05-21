@@ -48,7 +48,7 @@ class NcscIngester(BaseIngester):
             except Exception:
                 pass
 
-        # NCSC URLs are stable slugs — use the final path segment as source_id
+        # NCSC URLs are stable slugs - use the final path segment as source_id
         source_id = link.rstrip("/").split("/")[-1] if link else entry.get("id", title[:100])
 
         return Signal(

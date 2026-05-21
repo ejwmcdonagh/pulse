@@ -66,7 +66,7 @@ export default function CardModal({ card, onClose }: Props) {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
       onClick={onClose}
     >
-      {/* Modal panel — stop clicks inside from closing */}
+      {/* Modal panel - stop clicks inside from closing */}
       <div
         className="relative flex flex-col w-full max-w-3xl max-h-[92vh] rounded-xl bg-white shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
