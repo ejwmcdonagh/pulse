@@ -312,6 +312,10 @@ async def run_clustering() -> int:
     return total_written
 
 
+_BATCH_SIZE = 150
+_SEV_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+
+
 async def _cluster_domain(
     db: Any,
     client: anthropic.Anthropic,
@@ -319,9 +323,48 @@ async def _cluster_domain(
     signals: list[dict[str, Any]],
 ) -> tuple[int, set[str]]:
     """
-    Run one clustering LLM call for a single domain.
-    Returns (clusters_written, set_of_claimed_signal_ids).
+    Cluster all signals for one domain, chunking into batches of _BATCH_SIZE
+    so no single LLM call is overwhelmed. Signals are sorted by severity then
+    recency before chunking so related high-priority signals land in the same
+    batch and are most likely to be grouped together.
+    Returns (total_clusters_written, set_of_all_claimed_signal_ids).
     """
+    sorted_signals = sorted(
+        signals,
+        key=lambda s: (
+            _SEV_RANK.get(s.get("severity") or "", 4),
+            -(datetime.fromisoformat(s["published_at"].replace("Z", "+00:00")).timestamp()
+              if s.get("published_at") else 0),
+        ),
+    )
+    batches = [sorted_signals[i:i + _BATCH_SIZE] for i in range(0, len(sorted_signals), _BATCH_SIZE)]
+
+    total_written = 0
+    total_claimed: set[str] = set()
+
+    for batch_num, batch in enumerate(batches, 1):
+        logger.info(
+            "Domain %s: batch %d/%d (%d signals)",
+            domain.value, batch_num, len(batches), len(batch),
+        )
+        written, claimed = await _cluster_batch(db, client, domain, batch, batch_num, len(batches))
+        total_written += written
+        total_claimed.update(claimed)
+
+    return total_written, total_claimed
+
+
+async def _cluster_batch(
+    db: Any,
+    client: anthropic.Anthropic,
+    domain: "RiskDomain",
+    signals: list[dict[str, Any]],
+    batch_num: int,
+    total_batches: int,
+) -> tuple[int, set[str]]:
+    """Single LLM call for one batch of signals within a domain."""
+    batch_label = f"batch {batch_num}/{total_batches}" if total_batches > 1 else ""
+
     signal_list = [
         {
             "index": i,
@@ -336,11 +379,9 @@ async def _cluster_domain(
         for i, s in enumerate(signals)
     ]
 
-    logger.info("Domain %s: clustering %d signals", domain.value, len(signals))
-
     try:
         response = client.messages.create(
-            # Haiku handles domain-batched clustering well (50-80 signals per call).
+            # Haiku handles 150-signal batches well.
             # Switch to Opus below for higher quality at ~10x cost.
             model="claude-haiku-4-5-20251001",
             # model="claude-opus-4-7",
@@ -354,25 +395,26 @@ async def _cluster_domain(
                     "content": (
                         f"Here are {len(signal_list)} cybersecurity signals from the last "
                         f"{settings.clustering_window_days} days in the "
-                        f"{domain.value.replace('_', ' ')} risk domain. "
-                        f"Identify any convergence patterns.\n\n"
+                        f"{domain.value.replace('_', ' ')} risk domain"
+                        + (f" ({batch_label})" if batch_label else "")
+                        + ". Identify any convergence patterns.\n\n"
                         f"Signals:\n{json.dumps(signal_list, separators=(',', ':'))}"
                     ),
                 }
             ],
         )
     except Exception:
-        logger.exception("Clustering API call failed for domain %s", domain.value)
+        logger.exception("Clustering API call failed for domain %s %s", domain.value, batch_label)
         return 0, set()
 
     tool_use_block = next((b for b in response.content if b.type == "tool_use"), None)
     if not tool_use_block:
-        logger.warning("Domain %s: no tool_use block in response", domain.value)
+        logger.warning("Domain %s %s: no tool_use block in response", domain.value, batch_label)
         return 0, set()
 
     clusters_data: list[dict[str, Any]] = tool_use_block.input.get("clusters", [])
     if not clusters_data:
-        logger.info("Domain %s: model found no convergence patterns", domain.value)
+        logger.info("Domain %s %s: model found no convergence patterns", domain.value, batch_label)
         return 0, set()
 
     written = 0
