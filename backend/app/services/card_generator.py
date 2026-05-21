@@ -28,21 +28,13 @@ logger = logging.getLogger(__name__)
 
 _CARD_TOOL: dict[str, Any] = {
     "name": "write_risk_card",
-    "description": (
-        "Write a 5-layer risk intelligence card for a CISO audience. "
-        "Risk is the primary lens. Regulatory context supports the risk story, it does not lead it."
-    ),
+    "description": "Write a 5-layer risk intelligence card for a CISO audience. Risk first, regulatory context second.",
     "input_schema": {
         "type": "object",
         "properties": {
             "signal_headline": {
                 "type": "string",
-                "description": (
-                    "Present-tense headline describing the threat right now. "
-                    "Max 15 words. Lead with what attackers are doing or what is broken, not with regulation. "
-                    "Factual, direct, no jargon. "
-                    "Example: 'Attackers are actively exploiting a critical Cisco IOS-XE flaw across UK infrastructure.'"
-                ),
+                "description": "Present-tense threat headline, max 15 words. Lead with what attackers are doing or what is broken. Factual, no jargon.",
             },
             "evidence_stack": {
                 "type": "array",
@@ -50,61 +42,35 @@ _CARD_TOOL: dict[str, Any] = {
                 "items": {
                     "type": "object",
                     "properties": {
-                        "source": {"type": "string", "description": "Source name (CISA, NVD, NCSC, etc.)"},
-                        "title": {"type": "string", "description": "Signal title"},
-                        "url": {"type": "string", "description": "Source URL if available"},
-                        "point": {
-                            "type": "string",
-                            "description": "One sentence: what this specific signal adds to the risk picture",
-                        },
+                        "source": {"type": "string"},
+                        "title": {"type": "string"},
+                        "url": {"type": "string"},
+                        "point": {"type": "string", "description": "One sentence on what this signal adds to the risk picture"},
                     },
                     "required": ["source", "title", "point"],
                 },
             },
             "contextual_question": {
                 "type": "string",
-                "description": (
-                    "One direct question the CISO can pose to their security team or board. "
-                    "Focus on exposure - do we have this? are we affected? have we verified? "
-                    "Should be answerable with yes/no or a specific metric. "
-                    "Example: 'Do we have confirmed patch coverage for this CVE across our "
-                    "internet-facing Cisco estate, and when was it last verified?'"
-                ),
+                "description": "One direct question for the CISO's team. Focus on exposure: do we have this, are we affected, have we verified? Answerable with yes/no or a specific metric.",
             },
             "compliance_gap": {
                 "type": "string",
-                "description": (
-                    "2-3 sentences explaining which regulations make this risk commercially consequential. "
-                    "Frame it as: this risk exposes the organisation to [specific consequence] under [framework]. "
-                    "Reference real frameworks: NIS2, UK GDPR, DORA, FCA SYSC 13, ISO 27001, Cyber Essentials. "
-                    "This is supporting context for the risk, not the headline."
-                ),
+                "description": "2-3 sentences on which regulations make this risk commercially consequential. Frame as: exposes the org to [consequence] under [framework]. Use: NIS2, UK GDPR, DORA, FCA SYSC 13, ISO 27001.",
             },
             "board_talking_point": {
                 "type": "string",
                 "description": (
-                    "3-4 short sentences a CISO can read almost verbatim to a board of non-technical directors. "
-                    "Structure: (1) what is happening in the real world - no jargon, no CVE numbers, "
-                    "no product names unless household words; (2) the specific business consequence - "
-                    "choose the most credible from: fine with a real figure, insurance denial, "
-                    "revenue-affecting downtime, or customer trust damage; "
-                    "(3) the single action the board needs to approve or acknowledge. "
-                    "Write like a CFO explaining a financial risk, not an engineer explaining a vulnerability. "
-                    "No acronyms. No technical terms. Active voice. Short sentences. "
-                    "Example: 'Criminals are actively exploiting a flaw in widely-used software to break into "
-                    "corporate networks without needing a password. If they reach our systems before we close "
-                    "this gap, we face potential fines of up to 4% of global turnover and our cyber insurer "
-                    "may decline to pay out on a known unpatched vulnerability. We need to authorise emergency "
-                    "patching this week and confirm completion before the next board cycle.'"
+                    "3-4 sentences for non-technical board directors. "
+                    "(1) What is happening in plain English - no jargon, no CVE numbers; "
+                    "(2) specific business consequence - real fine figure, insurance denial, or revenue impact; "
+                    "(3) one action the board needs to approve. "
+                    "Active voice. Short sentences. Write like a CFO, not an engineer."
                 ),
             },
             "affected_teams": {
                 "type": "array",
-                "description": (
-                    "Which security teams are most likely to need to act on this card. "
-                    "Pick 1-3 from this exact list: IAM, SOC, AppSec, Cloud/Infra, Network, Endpoint, GRC, Data/Privacy. "
-                    "Only include teams with a clear connection to the threat - do not include all teams by default."
-                ),
+                "description": "1-3 teams from: IAM, SOC, AppSec, Cloud/Infra, Network, Endpoint, GRC, Data/Privacy. Only include teams with a clear connection to the threat.",
                 "items": {"type": "string"},
             },
         },
@@ -121,27 +87,11 @@ _CARD_TOOL: dict[str, Any] = {
 
 _SYSTEM_PROMPT = """You are a threat intelligence analyst writing risk briefings for CISOs at large organisations.
 
-Your job is to take clusters of live threat signals and turn them into clear, ranked risk cards.
+Take clusters of live threat signals and write clear risk cards. Risk is always the primary lens - lead with the threat, not compliance. Regulations appear only where they make the commercial consequence more concrete.
 
-Risk is always the primary lens. A card about an actively exploited vulnerability should open with
-the threat - what attackers are doing, what systems are exposed, how serious the risk is. Regulations
-are mentioned only where they make the commercial consequence more concrete.
+Board talking point: write for non-technical directors. Plain English, no CVE numbers, no acronyms. State a specific business consequence (real fine figure, insurance impact, or revenue risk). End with one clear ask. Three to four short sentences. Active voice.
 
-Core principles:
-- Lead every card with the threat, not the compliance angle
-- Score and rank by real-world risk: active exploitation, breadth of exposure, severity
-- Regulations are evidence of consequence, not the story itself
-- The CISO should be able to take this card into any meeting - technical or executive
-
-For the board talking point:
-- Write for non-technical directors who think in revenue, liability, and reputation
-- Open with what is happening in plain English - no jargon, no CVE numbers, no acronyms
-- State the specific business consequence - a real fine figure, insurance impact, or operational risk
-- End with one clear ask: what does the board need to approve or acknowledge?
-- Three to four sentences. Short. Active voice.
-
-For all other layers, write for the CISO - technically literate, commercially aware.
-Reference real frameworks where relevant: NIS2, UK GDPR, DORA, FCA SYSC 13, ISO 27001, NCSC CAF.
+All other layers: write for the CISO - technically literate, commercially aware. Reference real frameworks where relevant: NIS2, UK GDPR, DORA, FCA SYSC 13, ISO 27001, NCSC CAF.
 
 Do not fabricate CVE numbers, vendor names, or breach figures beyond what the signals contain."""
 
@@ -226,7 +176,7 @@ async def _generate_one(db: Any, client: anthropic.Anthropic, cluster: dict[str,
         {
             "source": s["source"].upper().replace("_", " "),
             "title": s["title"],
-            "summary": (s.get("summary") or "")[:500],
+            "summary": (s.get("summary") or "")[:250],
             "severity": s.get("severity"),
             "url": s.get("url") or "",
             "signal_type": s.get("signal_type"),
@@ -258,7 +208,7 @@ async def _generate_one(db: Any, client: anthropic.Anthropic, cluster: dict[str,
         model="claude-haiku-4-5-20251001",
         # model="claude-opus-4-7",
         # thinking={"type": "adaptive"},
-        max_tokens=2048,
+        max_tokens=1024,
         system=_SYSTEM_PROMPT,
         tools=[_CARD_TOOL],
         tool_choice={"type": "tool", "name": "write_risk_card"},

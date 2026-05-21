@@ -286,7 +286,7 @@ async def run_clustering() -> int:
             "id": s["id"],
             "source": s["source"],
             "title": s["title"],
-            "summary": (s.get("summary") or "")[:400],  # cap per-signal token cost
+            "summary": (s.get("summary") or "")[:250],  # cap per-signal token cost
             "severity": s.get("severity"),
             "risk_domains": s.get("risk_domains", []),
             "published_at": s.get("published_at"),
@@ -302,7 +302,7 @@ async def run_clustering() -> int:
         model="claude-haiku-4-5-20251001",
         # model="claude-opus-4-7",
         # thinking={"type": "adaptive"},
-        max_tokens=4096,
+        max_tokens=2048,
         system=_SYSTEM_PROMPT,
         tools=[_CLUSTER_TOOL],
         # Force tool use so we always get structured output, never a text refusal
@@ -313,7 +313,7 @@ async def run_clustering() -> int:
                 "content": (
                     f"Here are {len(signal_list)} cybersecurity signals from the last "
                     f"{settings.clustering_window_days} days. Identify any convergence patterns.\n\n"
-                    f"Signals:\n{json.dumps(signal_list, indent=2)}"
+                    f"Signals:\n{json.dumps(signal_list, separators=(',', ':'))}"
                 ),
             }
         ],
