@@ -14,9 +14,9 @@ BUILTIN_SOURCES = [
     {"id": "cisa_advisory",     "name": "CISA Advisories",             "description": "US cybersecurity advisories (RSS)"},
     {"id": "ncsc",              "name": "NCSC",                        "description": "UK National Cyber Security Centre alerts"},
     {"id": "nvd",               "name": "NVD",                         "description": "National Vulnerability Database - critical CVEs"},
-    {"id": "exploit_db",        "name": "Exploit-DB",                  "description": "Public exploit and proof-of-concept releases"},
+    {"id": "exploit_db",        "name": "SANS Internet Storm Center",  "description": "Daily threat analysis and active exploitation reports"},
     {"id": "bleeping_computer", "name": "Bleeping Computer",           "description": "Breaking cybersecurity news"},
-    {"id": "ico_enforcement",   "name": "ICO Enforcement",             "description": "UK data protection enforcement actions and fines"},
+    {"id": "ico_enforcement",   "name": "FCA News",                    "description": "UK Financial Conduct Authority enforcement actions and regulatory guidance"},
     {"id": "github_advisory",   "name": "GitHub Security Advisories",  "description": "Open source vulnerability advisories"},
 ]
 

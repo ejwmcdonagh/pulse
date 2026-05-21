@@ -24,12 +24,25 @@ Each card has five parts:
 
 Every day the system:
 
-1. Pulls threat data from four public sources (CISA, NVD, NCSC)
+1. Pulls threat data from eight built-in sources (see list below)
 2. Groups signals that point at the same underlying threat
 3. Scores each group by severity, recency, and how many sources agree
 4. Writes a card for every group above the score threshold
 
-You can also add your own RSS feeds and tell it which technologies your organisation uses. Cards that mention your tech stack float to the top.
+You can turn any source on or off, add your own RSS feeds, and tell it which technologies your organisation uses. Cards that mention your tech stack float to the top.
+
+### Built-in sources
+
+| Source | What it covers |
+|--------|---------------|
+| CISA KEV | US government list of vulnerabilities being actively exploited right now |
+| CISA Advisories | US cybersecurity threat advisories |
+| NCSC | UK National Cyber Security Centre alerts |
+| NVD | Critical CVEs from the US National Vulnerability Database |
+| SANS Internet Storm Center | Daily threat analysis from security practitioners |
+| Bleeping Computer | Breaking cybersecurity news, often 24-48 hours ahead of official advisories |
+| FCA News | UK Financial Conduct Authority enforcement actions and regulatory guidance |
+| GitHub Security Advisories | Open source software vulnerability database |
 
 ---
 
@@ -104,6 +117,17 @@ Add your Anthropic API key on the `ANTHROPIC_API_KEY=` line so it looks like:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-your-key-here
+```
+
+**Optional but recommended - GitHub token:**
+The GitHub Security Advisories source works without a token but is limited to 60 requests per hour. To remove that limit, get a free token:
+1. Go to [github.com/settings/tokens](https://github.com/settings/tokens)
+2. Click "Generate new token (classic)"
+3. Give it any name, leave all permission boxes unticked, set an expiry
+4. Copy the token and add it to your `.env` file:
+
+```
+GITHUB_TOKEN=ghp_your-token-here
 ```
 
 Leave everything else blank for now. You will fill in the Supabase values in the next step.
@@ -219,16 +243,20 @@ cd backend
 .venv\Scripts\activate
 ```
 
-Then run each of these one at a time, waiting for each to finish before running the next:
+Run each of these one at a time. Wait for each to finish before running the next. Each one returns something like `{"inserted": 40}` when done.
 
 ```bash
 curl -X POST "http://localhost:8000/api/ingest/run?source=cisa_kev"
 curl -X POST "http://localhost:8000/api/ingest/run?source=nvd"
 curl -X POST "http://localhost:8000/api/ingest/run?source=cisa_advisory"
 curl -X POST "http://localhost:8000/api/ingest/run?source=ncsc"
+curl -X POST "http://localhost:8000/api/ingest/run?source=exploit_db"
+curl -X POST "http://localhost:8000/api/ingest/run?source=bleeping_computer"
+curl -X POST "http://localhost:8000/api/ingest/run?source=ico_enforcement"
+curl -X POST "http://localhost:8000/api/ingest/run?source=github_advisory"
 ```
 
-Each one will return something like `{"inserted": 940}` when done.
+The `cisa_kev` command will return around 900 signals. The others return 10-50 each. The `github_advisory` command can be slow if you have not set a `GITHUB_TOKEN` in your `.env` file.
 
 Now generate the intelligence clusters and cards:
 
@@ -263,9 +291,11 @@ curl -X POST http://localhost:8000/api/cards/run
 
 Go to `http://localhost:3000` and click **Customize your feed** in the top right.
 
-**Technology stack** - add the vendors and products your organisation uses (for example: Palo Alto, Microsoft Exchange, Cisco). Cards that mention these will be highlighted and sorted to the top of each lane.
+**Your technology stack** - add the vendors and products your organisation runs (for example: Palo Alto, Microsoft Exchange, Cisco). Cards that mention these will be highlighted and sorted to the top of each lane.
 
-**Custom sources** - add any RSS or Atom feed URL. The system will ingest it daily alongside the built-in sources.
+**Signal sources** - all eight built-in sources are listed with an Active/Paused toggle. Pause any source you do not want. Changes take effect on the next scheduled run.
+
+**Add your own sources** - paste any RSS or Atom feed URL and give it a name. It will be ingested daily alongside the built-in sources.
 
 ---
 
@@ -333,6 +363,9 @@ Make sure you ran both `clusters/run` and `cards/run`. Clusters must exist befor
 
 **The database command fails with "Cannot find project ref"**
 Use `supabase migration up --local` not `supabase db push`. The `db push` command requires a remote Supabase project.
+
+**GitHub Advisory ingest returns a 403 rate limit error**
+You have hit the 60 requests/hour unauthenticated limit. Either wait an hour and try again, or add a free `GITHUB_TOKEN` to `backend/.env` (see Step 2 above). The token needs no permissions.
 
 ---
 

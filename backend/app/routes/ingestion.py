@@ -46,7 +46,10 @@ async def trigger_ingestion(source: SignalSource):
     if not ingester:
         raise HTTPException(status_code=404, detail=f"No ingester registered for source: {source}")
 
-    inserted = await ingester.run()
+    try:
+        inserted = await ingester.run()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
     return {"source": source, "inserted": inserted}
 
 

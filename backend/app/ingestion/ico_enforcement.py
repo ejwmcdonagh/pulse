@@ -1,17 +1,17 @@
 """
-ICO (Information Commissioner's Office) enforcement actions ingester.
+FCA (Financial Conduct Authority) news ingester.
 
-Source: https://ico.org.uk
-Feed:   https://ico.org.uk/about-the-ico/media-centre/news-and-blogs/rss/
+Source: https://www.fca.org.uk
+Feed:   https://www.fca.org.uk/news/rss.xml
 
-The ICO is the UK data protection regulator. Its enforcement actions are the
-most direct evidence available that a specific type of security failure results
-in a real financial penalty. A fine for inadequate access controls is far more
-compelling in a board talking point than citing GDPR Article 32 in the abstract.
+The FCA publishes enforcement actions, fines, bans, and regulatory guidance
+relevant to financial services firms. For CISO audiences in regulated sectors
+this is high-value context - FCA cyber and operational resilience requirements
+(SYSC 13, PS21/3, DORA alignment) directly shape board accountability.
 
-These signals map strongly to the data_exposure and identity_credential domains
-and provide the compliance gap and board talking point layers with concrete
-regulatory consequence data.
+FCA enforcement notices naming specific firms and fine amounts make the
+compliance gap and board talking point layers far more concrete than citing
+regulation in the abstract.
 """
 
 from datetime import UTC
@@ -26,7 +26,7 @@ from app.models.enums import SignalSource, SignalType
 from app.models.signal import Signal
 from app.severity_mapper import infer_severity
 
-FEED_URL = "https://ico.org.uk/about-the-ico/media-centre/news-and-blogs/rss/"
+FEED_URL = "https://www.fca.org.uk/news/rss.xml"
 
 
 class IcoEnforcementIngester(BaseIngester):

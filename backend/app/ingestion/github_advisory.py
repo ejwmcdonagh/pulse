@@ -28,6 +28,10 @@ from app.severity_mapper import infer_severity
 
 API_URL = "https://api.github.com/advisories"
 PAGE_SIZE = 100
+# Unauthenticated rate limit is 60 req/hour. Cap pages to stay safe.
+# With a GITHUB_TOKEN this can be raised - see config.py.
+MAX_PAGES_UNAUTHENTICATED = 5
+MAX_PAGES_AUTHENTICATED = 50
 
 
 _SEVERITY_MAP = {
@@ -43,27 +47,28 @@ class GithubAdvisoryIngester(BaseIngester):
 
     async def fetch(self) -> list[Signal]:
         now = datetime.now(UTC)
-        published_since = (now - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        cutoff = now - timedelta(days=30)
 
         headers = {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
         }
-        # Optional token for higher rate limits
         github_token = getattr(settings, "github_token", "")
         if github_token:
             headers["Authorization"] = f"Bearer {github_token}"
 
         signals: list[Signal] = []
         page = 1
+        max_pages = MAX_PAGES_AUTHENTICATED if github_token else MAX_PAGES_UNAUTHENTICATED
 
         async with async_client(timeout=30, headers=headers) as client:
-            while True:
+            while page <= max_pages:
                 params = {
-                    "severity": "critical,high",
-                    "published": f">={published_since}",
+                    "type": "reviewed",
                     "per_page": PAGE_SIZE,
                     "page": page,
+                    "direction": "desc",
+                    "sort": "published",
                 }
                 resp = await client.get(API_URL, params=params)
                 resp.raise_for_status()
@@ -72,15 +77,29 @@ class GithubAdvisoryIngester(BaseIngester):
                 if not data:
                     break
 
+                stop = False
                 for advisory in data:
+                    # Filter to CRITICAL and HIGH only in Python
+                    sev = (advisory.get("severity") or "").upper()
+                    if sev not in ("CRITICAL", "HIGH"):
+                        continue
+                    # Stop once we go past the 30-day window
+                    pub = advisory.get("published_at", "")
+                    if pub:
+                        try:
+                            pub_dt = datetime.fromisoformat(pub.replace("Z", "+00:00"))
+                            if pub_dt < cutoff:
+                                stop = True
+                                break
+                        except ValueError:
+                            pass
                     if signal := self._parse(advisory):
                         signals.append(signal)
 
-                if len(data) < PAGE_SIZE:
+                if stop or len(data) < PAGE_SIZE:
                     break
 
                 page += 1
-                # Stay well within unauthenticated rate limit
                 await asyncio.sleep(1)
 
         return signals
