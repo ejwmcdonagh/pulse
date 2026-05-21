@@ -13,6 +13,8 @@ class Settings(BaseSettings):
 
     # Optional NVD API key - increases rate limit from ~5 to 50 req/30s
     nvd_api_key: str = ""
+    # Optional GitHub token - increases advisory API rate limit from 60 to 5,000 req/hour
+    github_token: str = ""
 
     # Anthropic API key - required for signal clustering (Step 2) and card generation (Step 3)
     anthropic_api_key: str = ""

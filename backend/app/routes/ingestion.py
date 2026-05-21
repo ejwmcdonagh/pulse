@@ -10,8 +10,12 @@ or recovering from a failed scheduled run.
 from fastapi import APIRouter, HTTPException
 
 from app.db.client import get_db
+from app.ingestion.bleeping_computer import BleepingComputerIngester
 from app.ingestion.cisa_advisories import CisaAdvisoriesIngester
 from app.ingestion.cisa_kev import CisaKevIngester
+from app.ingestion.exploit_db import ExploitDbIngester
+from app.ingestion.github_advisory import GithubAdvisoryIngester
+from app.ingestion.ico_enforcement import IcoEnforcementIngester
 from app.ingestion.ncsc import NcscIngester
 from app.ingestion.nvd import NvdIngester
 from app.models.enums import SignalSource
@@ -21,10 +25,14 @@ router = APIRouter(prefix="/api/ingest", tags=["ingestion"])
 # Registry maps source enum values to ingester instances.
 # Adding a new source requires only adding it here - the route handler is generic.
 _INGESTERS = {
-    SignalSource.CISA_KEV: CisaKevIngester(),
-    SignalSource.CISA_ADVISORY: CisaAdvisoriesIngester(),
-    SignalSource.NCSC: NcscIngester(),
-    SignalSource.NVD: NvdIngester(),
+    SignalSource.CISA_KEV:          CisaKevIngester(),
+    SignalSource.CISA_ADVISORY:     CisaAdvisoriesIngester(),
+    SignalSource.NCSC:              NcscIngester(),
+    SignalSource.NVD:               NvdIngester(),
+    SignalSource.EXPLOIT_DB:        ExploitDbIngester(),
+    SignalSource.BLEEPING_COMPUTER: BleepingComputerIngester(),
+    SignalSource.ICO_ENFORCEMENT:   IcoEnforcementIngester(),
+    SignalSource.GITHUB_ADVISORY:   GithubAdvisoryIngester(),
 }
 
 

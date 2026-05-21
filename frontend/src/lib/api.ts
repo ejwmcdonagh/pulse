@@ -55,6 +55,13 @@ export type CustomSource = {
   created_at: string;
 };
 
+export type BuiltinSource = {
+  id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+};
+
 export async function fetchCards(): Promise<ProvocationCard[]> {
   const res = await fetch(`${API_BASE}/api/cards?limit=100`, {
     cache: "no-store",
@@ -73,6 +80,13 @@ export async function fetchProfile(): Promise<OrgProfile> {
 export async function fetchSources(): Promise<CustomSource[]> {
   const res = await fetch(`${API_BASE}/api/profile/sources`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to fetch sources: ${res.status}`);
+  const data = await res.json();
+  return data.sources ?? [];
+}
+
+export async function fetchBuiltinSources(): Promise<BuiltinSource[]> {
+  const res = await fetch(`${API_BASE}/api/profile/sources/builtin`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch builtin sources: ${res.status}`);
   const data = await res.json();
   return data.sources ?? [];
 }

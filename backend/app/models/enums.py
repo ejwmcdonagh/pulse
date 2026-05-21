@@ -6,6 +6,11 @@ class SignalSource(str, Enum):
     CISA_ADVISORY = "cisa_advisory"
     NCSC = "ncsc"
     NVD = "nvd"
+    # New built-in sources
+    EXPLOIT_DB = "exploit_db"
+    BLEEPING_COMPUTER = "bleeping_computer"
+    ICO_ENFORCEMENT = "ico_enforcement"
+    GITHUB_ADVISORY = "github_advisory"
     # Dynamic value used for all custom RSS sources added via the profile API.
     # The actual source name is stored in signal.tags as "source:<name>".
     CUSTOM = "custom"

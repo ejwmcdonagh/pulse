@@ -8,6 +8,18 @@ from app.ingestion.custom_rss import run_custom_ingestion
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
+# All built-in sources in display order
+BUILTIN_SOURCES = [
+    {"id": "cisa_kev",          "name": "CISA KEV",                    "description": "US known exploited vulnerabilities catalog"},
+    {"id": "cisa_advisory",     "name": "CISA Advisories",             "description": "US cybersecurity advisories (RSS)"},
+    {"id": "ncsc",              "name": "NCSC",                        "description": "UK National Cyber Security Centre alerts"},
+    {"id": "nvd",               "name": "NVD",                         "description": "National Vulnerability Database - critical CVEs"},
+    {"id": "exploit_db",        "name": "Exploit-DB",                  "description": "Public exploit and proof-of-concept releases"},
+    {"id": "bleeping_computer", "name": "Bleeping Computer",           "description": "Breaking cybersecurity news"},
+    {"id": "ico_enforcement",   "name": "ICO Enforcement",             "description": "UK data protection enforcement actions and fines"},
+    {"id": "github_advisory",   "name": "GitHub Security Advisories",  "description": "Open source vulnerability advisories"},
+]
+
 
 class ProfileUpdate(BaseModel):
     technologies: list[str]
@@ -25,6 +37,40 @@ async def get_profile():
     db = get_db()
     result = db.table("org_profile").select("*").eq("id", 1).single().execute()
     return result.data
+
+
+@router.get("/sources/builtin")
+async def list_builtin_sources():
+    """Return all built-in sources with their current enabled state."""
+    db = get_db()
+    result = db.table("org_profile").select("disabled_sources").eq("id", 1).single().execute()
+    disabled = result.data.get("disabled_sources", []) if result.data else []
+    sources = [
+        {**s, "enabled": s["id"] not in disabled}
+        for s in BUILTIN_SOURCES
+    ]
+    return {"sources": sources}
+
+
+@router.patch("/sources/builtin/{source_id}/toggle")
+async def toggle_builtin_source(source_id: str):
+    """Enable or disable a built-in source."""
+    if not any(s["id"] == source_id for s in BUILTIN_SOURCES):
+        raise HTTPException(status_code=404, detail="Unknown source")
+    db = get_db()
+    result = db.table("org_profile").select("disabled_sources").eq("id", 1).single().execute()
+    disabled: list[str] = result.data.get("disabled_sources", []) if result.data else []
+    if source_id in disabled:
+        disabled = [s for s in disabled if s != source_id]
+        enabled = True
+    else:
+        disabled = [*disabled, source_id]
+        enabled = False
+    db.table("org_profile").update({
+        "disabled_sources": disabled,
+        "updated_at": datetime.now(UTC).isoformat(),
+    }).eq("id", 1).execute()
+    return {"id": source_id, "enabled": enabled}
 
 
 @router.put("")

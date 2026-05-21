@@ -141,8 +141,18 @@ export default function CardModal({ card, onClose }: Props) {
             <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3">
               Board talking point
             </h3>
-            <div className="rounded-lg bg-zinc-900 px-5 py-5">
-              <p className="text-sm text-zinc-100 leading-7">{card.board_talking_point}</p>
+            <div className="rounded-lg bg-slate-50 border border-slate-200 px-5 py-5">
+              <ul className="flex flex-col gap-3">
+                {card.board_talking_point
+                  .split(/(?<=[.!?])\s+/)
+                  .filter((s) => s.trim().length > 0)
+                  .map((sentence, i) => (
+                    <li key={i} className="flex gap-3 items-start">
+                      <span className="mt-[0.4rem] h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />
+                      <span className="text-sm text-slate-700 leading-6">{sentence.trim()}</span>
+                    </li>
+                  ))}
+              </ul>
             </div>
           </section>
 
