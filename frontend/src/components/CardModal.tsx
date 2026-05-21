@@ -202,7 +202,7 @@ export default function CardModal({ card, onClose }: Props) {
                   Teams affected — click for impact summary
                 </p>
                 <div className="flex gap-1.5 flex-wrap">
-                  {card.affected_teams.map((team) => (
+                  {[...new Set(card.affected_teams)].map((team) => (
                     <button
                       key={team}
                       onClick={() => setActiveTeam(activeTeam === team ? null : team)}

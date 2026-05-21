@@ -237,7 +237,7 @@ async def _generate_one(db: Any, client: anthropic.Anthropic, cluster: dict[str,
         "compliance_gap": card_input["compliance_gap"],
         "contextual_question": card_input["contextual_question"],
         "board_talking_point": card_input["board_talking_point"],
-        "affected_teams": card_input.get("affected_teams", []),
+        "affected_teams": list(dict.fromkeys(card_input.get("affected_teams", []))),
         "risk_domain": cluster["risk_domain"],
         "score": cluster["score"],
         "metadata": {
