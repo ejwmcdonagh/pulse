@@ -28,20 +28,26 @@ _DOMAIN_KEYWORDS: list[tuple[RiskDomain, frozenset[str]]] = [
         RiskDomain.IDENTITY_CREDENTIAL,
         frozenset([
             "authentication", "credential", "oauth", "mfa", "multi-factor",
-            "privilege", "identity", "session", "token", "ldap", "kerberos",
+            "privilege", "identity", "ldap", "kerberos",
             "password", "phishing", "account takeover", "aitm",
             "adversary-in-the-middle", "passkey", "fido",
             "social engineering", "business email compromise", "bec",
             "spear phishing", "smishing", "vishing", "impersonation",
             "pretexting", "deepfake", "fraud", "wire transfer", "invoice fraud",
+            # Cloud identity management terms - specific enough to be unambiguous
+            "service account", "iam role", "secret manager", "key vault",
         ]),
     ),
     (
         RiskDomain.SUPPLY_CHAIN,
         frozenset([
             "supply chain", "dependency", "third party", "third-party",
-            "vendor", "npm", "pypi", "open source", "open-source",
             "package manager", "software bill of materials", "sbom",
+            "typosquat", "malicious package", "compromised package",
+            # "npm", "pypi", "open source", "open-source" removed - too broad,
+            # catching any CVE in an open source project. Real supply chain attacks
+            # (malicious packages, compromised registries) match "malicious package"
+            # or "compromised package" instead.
         ]),
     ),
     (
@@ -53,22 +59,15 @@ _DOMAIN_KEYWORDS: list[tuple[RiskDomain, frozenset[str]]] = [
         ]),
     ),
     (
-        RiskDomain.CLOUD_SECURITY,
-        frozenset([
-            "aws", "azure", "google cloud", "gcp", "cloud provider",
-            "kubernetes", "k8s", "container", "docker", "eks", "aks", "gke",
-            "terraform", "infrastructure as code", "iac", "serverless", "lambda",
-            "cloud misconfiguration", "cloud iam", "service account", "iam role",
-            "ec2", "blob storage", "cloud storage", "s3 bucket",
-            "cloud native", "cloudtrail", "secret manager", "key vault",
-        ]),
-    ),
-    (
         RiskDomain.DATA_EXPOSURE,
         frozenset([
-            "data breach", "misconfiguration", "storage",
-            "exfiltration", "data leak", "exposure", "pii", "gdpr",
-            "publicly accessible",
+            # "exposure" and "storage" removed - both appear in almost every CVE description
+            # and ICS advisory, flooding data_exposure with false positives
+            "data breach", "data leak", "exfiltration", "pii", "gdpr",
+            "publicly accessible", "breach notification", "leaked database",
+            "exposed database", "sensitive data",
+            # Specific cloud storage terms are genuine data exposure signals
+            "s3 bucket", "cloud misconfiguration", "blob storage", "cloud storage",
         ]),
     ),
     (
@@ -77,6 +76,8 @@ _DOMAIN_KEYWORDS: list[tuple[RiskDomain, frozenset[str]]] = [
             "cve", "patch", "unpatched", "eol", "end-of-life", "end of life",
             "remote code execution", "rce", "exploit", "zero-day", "zero day",
             "critical vulnerability", "buffer overflow", "injection",
+            # Container orchestration CVEs are patch stories
+            "kubernetes", "k8s",
         ]),
     ),
 ]

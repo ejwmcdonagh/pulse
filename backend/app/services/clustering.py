@@ -73,7 +73,6 @@ _CLUSTER_TOOL: dict[str, Any] = {
                                 "detection_response",
                                 "data_exposure",
                                 "ransomware_extortion",
-                                "cloud_security",
                             ],
                             "description": "Primary risk domain for this cluster",
                         },
@@ -115,14 +114,25 @@ _SYSTEM_PROMPT = """You are a threat intelligence analyst. You will be given a l
 cybersecurity signals - vulnerability disclosures, threat advisories, and known-exploited
 vulnerability entries - and asked to identify convergence patterns.
 
-Your job is to find groups of signals that are pointing at the same underlying threat.
-A genuine cluster has signals that share a common cause: the same CVE, the same exploit
-technique, the same threat actor campaign, the same vendor being targeted across multiple
-advisories.
+Your job is to find groups of signals pointing at the same underlying threat.
 
-Do not group signals just because they share a broad category like "ransomware" or
-"vulnerabilities". The threshold for a multi-signal cluster is: would a CISO reading these
-signals together have reason to believe they represent a single developing story?
+Strong clustering evidence (any of these justifies a cluster):
+- Same CVE ID appearing across multiple sources (e.g. NVD + CISA KEV + CISA advisory = strong match)
+- Same vendor or product targeted in multiple advisories within days of each other
+- Same threat actor or campaign named across multiple sources
+- An advisory and a KEV entry that clearly reference the same vulnerability
+- Same exploit technique applied to the same product family
+
+Do NOT group signals that only share a vulnerability class. "Multiple products have RCE"
+is not a cluster - it is noise. "Flowise versions before 3.1.0 have RCE" is a cluster.
+The test: could a patch manager read this cluster and know exactly which product or
+vendor to act on? If the answer requires listing more than 2-3 unrelated vendors, split it.
+
+Signal types for context:
+- vulnerability: CVE entry from NVD or GitHub Advisory
+- advisory: official advisory from CISA, NCSC, or similar
+- threat_intel: blog post or research from a vendor or researcher
+A KEV entry (cisa_kev source) means the CVE is confirmed actively exploited in the wild.
 
 Single-signal clusters are allowed when a signal is significant enough to stand alone -
 for example: a confirmed ransomware campaign advisory, an NCSC alert with no related signals,
@@ -150,6 +160,7 @@ def _score(signals: list[dict[str, Any]], all_domains: list[str]) -> tuple[float
     - Recency: +3 per signal published within last 7 days (uncapped - recency is always relevant)
     - Source diversity: +5 per unique source (cross-source = stronger signal)
     - Domain span: +10 if cluster touches 2+ domains (multi-vector = board-relevant)
+    - KEV bonus: +20 if any signal is from cisa_kev (confirmed active exploitation)
     """
     now = datetime.now(UTC)
     recency_cutoff = now - timedelta(days=7)
@@ -175,6 +186,7 @@ def _score(signals: list[dict[str, Any]], all_domains: list[str]) -> tuple[float
 
     # Recency applies to all signals - a cluster staying active over time should
     # keep scoring, not be penalised for having more signals than the cap
+    kev_present = False
     for sig in signals:
         pub = sig.get("published_at")
         if pub:
@@ -185,17 +197,23 @@ def _score(signals: list[dict[str, Any]], all_domains: list[str]) -> tuple[float
             except ValueError:
                 pass
         sources.add(sig.get("source", "unknown"))
+        if sig.get("source") == "cisa_kev":
+            kev_present = True
 
     source_pts = len(sources) * 5.0
     domain_pts = 10.0 if len(set(all_domains)) >= 2 else 0.0
+    # KEV entries have confirmed real-world exploitation. A KEV signal with no CVSS
+    # would otherwise score ~10 and never generate a card despite being high priority.
+    kev_pts = 20.0 if kev_present else 0.0
 
-    total = base + severity_pts + recency_pts + source_pts + domain_pts
+    total = base + severity_pts + recency_pts + source_pts + domain_pts + kev_pts
     breakdown = {
         "base": base,
         "severity": severity_pts,
         "recency": recency_pts,
         "source_diversity": source_pts,
         "domain_span": domain_pts,
+        "kev_bonus": kev_pts,
         "total": total,
     }
     return total, breakdown
@@ -264,7 +282,6 @@ def _already_clustered_ids(db: Any, signal_ids: list[str]) -> set[str]:
 # vulnerability_patch runs last and only sees what nothing else claimed.
 _DOMAIN_ORDER = [
     RiskDomain.RANSOMWARE_EXTORTION,
-    RiskDomain.CLOUD_SECURITY,
     RiskDomain.SUPPLY_CHAIN,
     RiskDomain.DATA_EXPOSURE,
     RiskDomain.DETECTION_RESPONSE,
@@ -290,10 +307,11 @@ async def run_clustering() -> int:
     db = get_db()
     window_start = (datetime.now(UTC) - timedelta(days=settings.clustering_window_days)).isoformat()
 
-    # Fetch all signals in window once - partitioned by domain in Python below
+    # Fetch all signals in window once - partitioned by domain in Python below.
+    # cvss_score and tags included because both help the LLM group related CVEs accurately.
     result = (
         db.table("signals")
-        .select("id, source, title, summary, severity, risk_domains, published_at, signal_type")
+        .select("id, source, title, summary, severity, cvss_score, risk_domains, published_at, signal_type, tags")
         .gte("published_at", window_start)
         .order("published_at", desc=False)
         .execute()
@@ -343,6 +361,9 @@ async def run_clustering() -> int:
 
 _BATCH_SIZE = 150
 _SEV_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+# Full summary gives the model the context it needs to distinguish related CVEs -
+# affected versions, vendor names, attack vectors often appear past the 400-char mark
+_SUMMARY_CAP = 800
 
 
 async def _cluster_domain(
@@ -399,22 +420,30 @@ async def _cluster_batch(
             "index": i,
             "id": s["id"],
             "source": s["source"],
+            "signal_type": s.get("signal_type"),
             "title": s["title"],
-            "summary": (s.get("summary") or "")[:400],
+            "summary": (s.get("summary") or "")[:_SUMMARY_CAP],
             "severity": s.get("severity"),
+            # cvss_score provides a precise severity anchor - more useful than the
+            # bucketed severity string when distinguishing related CVEs
+            "cvss_score": s.get("cvss_score"),
             "risk_domains": s.get("risk_domains", []),
             "published_at": s.get("published_at"),
+            # tags carry CVE reference sources (NVD), ransomware flags (KEV),
+            # and product categories - direct grouping evidence
+            "tags": (s.get("tags") or [])[:8],
         }
         for i, s in enumerate(signals)
     ]
 
     try:
         response = client.messages.create(
-            # Haiku handles 150-signal batches well.
-            # Switch to Opus below for higher quality at ~10x cost.
             model="claude-haiku-4-5-20251001",
-            # model="claude-opus-4-7",
-            max_tokens=4096,
+            # temperature=0 makes clustering deterministic - same signals produce the
+            # same clusters on every run, preventing variance between daily runs
+            temperature=0,
+            # 8192 prevents output truncation on busy domains that produce 20+ clusters
+            max_tokens=8192,
             system=_SYSTEM_PROMPT,
             tools=[_CLUSTER_TOOL],
             tool_choice={"type": "tool", "name": "record_signal_clusters"},

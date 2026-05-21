@@ -2,7 +2,7 @@
 
 Live signals. Real risk. Board-ready.
 
-Pulse watches cybersecurity threat data from thirteen live sources, groups related signals together, scores them by real-world risk, and writes intelligence cards a CISO can take straight into a board meeting.
+Pulse watches cybersecurity threat data from sixteen live sources, groups related signals together, scores them by real-world risk, and writes intelligence cards a CISO can take straight into a board meeting.
 
 It is not a compliance tracker. It is a risk intelligence feed that tells you what is happening right now, how serious it is, and what to say about it.
 
@@ -26,12 +26,12 @@ Each card has five parts:
 
 Every day the system:
 
-1. Pulls threat data from thirteen built-in sources (see list below)
+1. Pulls threat data from sixteen built-in sources (see list below)
 2. Groups signals that point at the same underlying threat
 3. Scores each group by severity, recency, and how many sources agree
 4. Writes a card for every group above the score threshold
 
-You can turn any source on or off, add your own RSS feeds, and tell it which technologies your organisation uses. Cards that mention your tech stack float to the top. You can also filter the board by security team (IAM, SOC, AppSec, and others) to focus on what is relevant to a specific group.
+You can turn any source on or off, add your own RSS feeds, and tell it which technologies your organisation uses. Cards that mention your tech stack float to the top. You can filter the board by risk domain to see cross-lane cards that touch that domain, and by security team (IAM, SOC, AppSec, and others) to focus on what is relevant to a specific group.
 
 ### Built-in sources
 
@@ -62,6 +62,9 @@ You can turn any source on or off, add your own RSS feeds, and tell it which tec
 | Horizon3.ai | Adversarial attack path research and real-world exploit analysis |
 | Dark Reading | In-depth cybersecurity research and analysis |
 | CrowdStrike | Adversary intelligence and threat research |
+| Microsoft Security | Microsoft threat research and security blog |
+| Cofense | Phishing and email-based threat intelligence |
+| Krebs on Security | Investigative cybersecurity journalism |
 
 ---
 
@@ -278,6 +281,9 @@ curl -X POST "http://localhost:8000/api/ingest/run?source=google_threat_intel"
 curl -X POST "http://localhost:8000/api/ingest/run?source=horizon3"
 curl -X POST "http://localhost:8000/api/ingest/run?source=dark_reading"
 curl -X POST "http://localhost:8000/api/ingest/run?source=crowdstrike"
+curl -X POST "http://localhost:8000/api/ingest/run?source=microsoft_security"
+curl -X POST "http://localhost:8000/api/ingest/run?source=cofense"
+curl -X POST "http://localhost:8000/api/ingest/run?source=krebs"
 ```
 
 The `cisa_kev` command will return around 900 signals. The others return 10-50 each. The `github_advisory` command can be slow if you have not set a `GITHUB_TOKEN` in your `.env` file.
@@ -329,7 +335,7 @@ The system uses Claude Haiku by default. This costs about $0.10 per full pipelin
 
 For production, switch to Claude Opus for higher quality cards.
 
-Both service files already have the Opus settings written in as comments. Open these two files:
+Both service files already have the Opus line written in as a comment. Open these two files:
 - `backend/app/services/clustering.py`
 - `backend/app/services/card_generator.py`
 
@@ -338,18 +344,16 @@ In each file, find this block:
 ```python
 model="claude-haiku-4-5-20251001",
 # model="claude-opus-4-7",
-# thinking={"type": "adaptive"},
 ```
 
-To switch to Opus, comment out the Haiku line and uncomment the two Opus lines:
+To switch to Opus, comment out the Haiku line and uncomment the Opus line:
 
 ```python
 # model="claude-haiku-4-5-20251001",
 model="claude-opus-4-7",
-thinking={"type": "adaptive"},
 ```
 
-Note: `thinking` only works with Opus. If you switch back to Haiku, comment it out again or the API will return an error.
+Note: both services use forced tool_choice for structured output, which is incompatible with extended thinking. Do not add a `thinking` parameter - it will cause a 400 error.
 
 ### Approximate costs per pipeline run
 
@@ -421,7 +425,7 @@ reg-radar/
 - [x] Step 1 - Pull threat data from CISA, NVD, NCSC
 - [x] Step 2 - Group related signals into clusters
 - [x] Step 3 - Generate 5-layer intelligence cards using AI
-- [x] Step 4 - Dashboard with six domain lanes, card modal, tech stack highlighting, team filter, and per-team AI impact summaries
+- [x] Step 4 - Dashboard with five domain lanes, card modal, tech stack highlighting, domain filter, team filter, and per-team AI impact summaries
 - [ ] Step 5 - Connect to your SIEM or ticketing system
 - [ ] Step 6 - Weekly email digest
 - [ ] Step 7 - Onboarding flow for new organisations

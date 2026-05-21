@@ -4,6 +4,15 @@ import { useState } from "react";
 import type { ProvocationCard } from "@/lib/api";
 import CardModal from "./CardModal";
 
+const DOMAIN_SHORT_LABELS: Record<string, string> = {
+  identity_credential:  "Identity",
+  vulnerability_patch:  "Vuln",
+  supply_chain:         "Supply Chain",
+  detection_response:   "Detection",
+  data_exposure:        "Data",
+  ransomware_extortion: "Ransomware",
+};
+
 const SCORE_TIERS = [
   { min: 70, label: "Critical", colour: "bg-red-600 text-white" },
   { min: 45, label: "High",     colour: "bg-orange-500 text-white" },
@@ -70,6 +79,9 @@ export default function ProvocationCardComponent({
 }) {
   const [open, setOpen] = useState(false);
 
+  const secondaryDomains = (card.metadata.all_domains ?? [])
+    .filter((d) => d !== card.risk_domain);
+
   return (
     <>
       <article
@@ -77,7 +89,7 @@ export default function ProvocationCardComponent({
         tabIndex={0}
         onClick={() => setOpen(true)}
         onKeyDown={(e) => e.key === "Enter" && setOpen(true)}
-        className={`cursor-pointer rounded-lg border bg-white p-4 shadow-sm flex flex-col justify-between h-56 hover:shadow-md transition-all ${
+        className={`cursor-pointer rounded-lg border bg-white p-4 shadow-sm flex flex-col justify-between h-72 hover:shadow-md transition-all ${
           highlighted
             ? "border-amber-400 ring-1 ring-amber-300"
             : "border-zinc-200 hover:border-zinc-400"
@@ -106,15 +118,32 @@ export default function ProvocationCardComponent({
             {card.metadata.cluster_summary}
           </p>
         </div>
-        {card.affected_teams?.length > 0 && (
-          <div className="flex gap-1 flex-wrap mt-2">
-            {[...new Set(card.affected_teams)].map((team) => (
-              <span key={team} className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500">
-                {team}
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="flex flex-col gap-1 mt-2">
+          {secondaryDomains.length > 0 && (
+            <div className="rounded-md bg-zinc-50 border border-zinc-100 px-2 py-1 flex items-center gap-2">
+              <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wide shrink-0">Also in</span>
+              <div className="flex gap-1 flex-wrap">
+                {secondaryDomains.map((d) => (
+                  <span key={d} className="rounded-full border border-zinc-300 px-2 py-0.5 text-xs text-zinc-500">
+                    {DOMAIN_SHORT_LABELS[d] ?? d}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {card.affected_teams?.length > 0 && (
+            <div className="rounded-md bg-zinc-50 border border-zinc-100 px-2 py-1 flex items-center gap-2">
+              <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wide shrink-0">Teams</span>
+              <div className="flex gap-1 flex-wrap">
+                {[...new Set(card.affected_teams)].map((team) => (
+                  <span key={team} className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs text-zinc-600">
+                    {team}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </article>
 
       {open && <CardModal card={card} onClose={() => setOpen(false)} />}
