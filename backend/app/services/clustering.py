@@ -243,16 +243,29 @@ def _already_clustered_ids(db: Any, signal_ids: list[str]) -> set[str]:
     return clustered
 
 
+# Process specific domains first so their signals get claimed before the
+# vulnerability_patch catch-all runs. A ransomware advisory should cluster
+# in ransomware_extortion, not end up duplicated in vulnerability_patch too.
+# vulnerability_patch runs last and only sees what nothing else claimed.
+_DOMAIN_ORDER = [
+    RiskDomain.RANSOMWARE_EXTORTION,
+    RiskDomain.SUPPLY_CHAIN,
+    RiskDomain.DATA_EXPOSURE,
+    RiskDomain.DETECTION_RESPONSE,
+    RiskDomain.IDENTITY_CREDENTIAL,
+    RiskDomain.VULNERABILITY_PATCH,
+]
+
+
 async def run_clustering() -> int:
     """
     Entry point called by the scheduler and the manual API trigger.
     Returns the number of new clusters written to the DB.
 
-    Runs one LLM call per risk domain (6 total) rather than one giant call.
-    Each domain gets 30-80 focused signals instead of 500+ diverse ones,
-    which gives the model a much better chance of finding genuine convergence.
-    Signals tagged for multiple domains appear in each relevant batch but can
-    only be claimed by the first cluster that includes them.
+    Processes domains in specificity order (specific first, vulnerability_patch
+    last). Signals claimed by an earlier domain are excluded from later ones,
+    so each signal ends up in exactly one cluster. This prevents vulnerability_patch
+    from ballooning with signals that already have a more precise home.
     """
     if not settings.anthropic_api_key:
         logger.warning("ANTHROPIC_API_KEY not set - skipping clustering run")
@@ -288,24 +301,24 @@ async def run_clustering() -> int:
     )
 
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+
+    # Track signals claimed this run so specific domains get first pick
+    within_run_claimed: set[str] = set()
     total_written = 0
 
-    for domain in RiskDomain:
-        # Each domain gets its full unclustered signal pool independently.
-        # Signals tagged for multiple domains appear in each relevant batch - a
-        # CVE affecting both identity and vulnerability domains is genuinely
-        # relevant in both lanes. The next run's _already_clustered_ids check
-        # prevents re-processing signals that end up in clusters.
+    for domain in _DOMAIN_ORDER:
         domain_signals = [
             s for s in unclustered
             if domain.value in (s.get("risk_domains") or [])
+            and s["id"] not in within_run_claimed
         ]
 
         if not domain_signals:
-            logger.info("Domain %s: no unclustered signals, skipping", domain.value)
+            logger.info("Domain %s: no unclaimed signals, skipping", domain.value)
             continue
 
-        written, _ = await _cluster_domain(db, client, domain, domain_signals)
+        written, claimed = await _cluster_domain(db, client, domain, domain_signals)
+        within_run_claimed.update(claimed)
         total_written += written
 
     logger.info("Clustering complete: %d new clusters written", total_written)
