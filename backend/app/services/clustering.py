@@ -133,26 +133,38 @@ A signal can only belong to one cluster. Signals that are neither part of a conv
 pattern nor significant enough to stand alone should not be clustered."""
 
 
+# Max signals that contribute to base and severity scoring. Beyond this,
+# additional signals from the same source stop inflating the score - a cluster
+# of 25 identical GitHub Advisory CVEs should not outrank a 4-signal
+# multi-source cluster just because of volume.
+_SIGNAL_SCORE_CAP = 5
+
+
 def _score(signals: list[dict[str, Any]], all_domains: list[str]) -> tuple[float, dict[str, Any]]:
     """
     Additive scoring model. Returns (total_score, breakdown_dict).
 
     Components:
-    - Base: 2 points per signal
-    - Severity: CRITICAL=10, HIGH=5, MEDIUM=2 per signal
-    - Recency: +3 per signal published within last 7 days
+    - Base: 2 points per signal, capped at _SIGNAL_SCORE_CAP signals
+    - Severity: CRITICAL=10, HIGH=5, MEDIUM=2 per signal, capped at _SIGNAL_SCORE_CAP
+    - Recency: +3 per signal published within last 7 days (uncapped - recency is always relevant)
     - Source diversity: +5 per unique source (cross-source = stronger signal)
     - Domain span: +10 if cluster touches 2+ domains (multi-vector = board-relevant)
     """
     now = datetime.now(UTC)
     recency_cutoff = now - timedelta(days=7)
 
-    base = len(signals) * 2.0
+    # Sort scored signals: highest severity first so the cap keeps the best ones
+    _sev_order = {Severity.CRITICAL.value: 0, Severity.HIGH.value: 1, Severity.MEDIUM.value: 2}
+    scored_signals = sorted(signals, key=lambda s: _sev_order.get(s.get("severity") or "", 3))
+    capped = scored_signals[:_SIGNAL_SCORE_CAP]
+
+    base = len(capped) * 2.0
     severity_pts = 0.0
     recency_pts = 0.0
     sources: set[str] = set()
 
-    for sig in signals:
+    for sig in capped:
         sev = sig.get("severity")
         if sev == Severity.CRITICAL.value:
             severity_pts += 10
@@ -161,6 +173,9 @@ def _score(signals: list[dict[str, Any]], all_domains: list[str]) -> tuple[float
         elif sev == Severity.MEDIUM.value:
             severity_pts += 2
 
+    # Recency applies to all signals - a cluster staying active over time should
+    # keep scoring, not be penalised for having more signals than the cap
+    for sig in signals:
         pub = sig.get("published_at")
         if pub:
             try:
@@ -169,7 +184,6 @@ def _score(signals: list[dict[str, Any]], all_domains: list[str]) -> tuple[float
                     recency_pts += 3
             except ValueError:
                 pass
-
         sources.add(sig.get("source", "unknown"))
 
     source_pts = len(sources) * 5.0
@@ -250,8 +264,8 @@ def _already_clustered_ids(db: Any, signal_ids: list[str]) -> set[str]:
 # vulnerability_patch runs last and only sees what nothing else claimed.
 _DOMAIN_ORDER = [
     RiskDomain.RANSOMWARE_EXTORTION,
-    RiskDomain.SUPPLY_CHAIN,
     RiskDomain.CLOUD_SECURITY,
+    RiskDomain.SUPPLY_CHAIN,
     RiskDomain.DATA_EXPOSURE,
     RiskDomain.DETECTION_RESPONSE,
     RiskDomain.IDENTITY_CREDENTIAL,
