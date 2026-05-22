@@ -34,7 +34,7 @@ Every day the system:
 
 **Important:** clustering only looks at signals from the last 30 days. Signals are stored permanently but anything older than the window is ignored until the window is extended. See [How the signal window works](#how-the-signal-window-works) for details.
 
-You can turn any source on or off, add your own RSS feeds, and tell it which technologies your organisation uses. Cards that mention your tech stack float to the top. You can filter the board by risk domain to see cross-lane cards that touch that domain, and by security team (IAM, SOC, AppSec, and others) to focus on what is relevant to a specific group. A simple mode toggle rewrites card content for non-technical board members.
+You can turn any source on or off, add your own RSS feeds, and tell it which technologies your organisation uses. Cards that mention your tech stack float to the top. You can filter the board by risk domain to see cross-lane cards that touch that domain, and by security team (IAM, SOC, AppSec, and others) to focus on what is relevant to a specific group. Technologies you do not run can be hidden so their cards never appear. A simple mode toggle rewrites card content for non-technical board members.
 
 ### Built-in sources
 
@@ -358,9 +358,50 @@ Go to `http://localhost:3000` and click **Customize your feed** in the top right
 
 **Your technology stack** - add the vendors and products your organisation runs (for example: Palo Alto, Microsoft Exchange, Cisco). Cards that mention these will be highlighted and sorted to the top of each lane.
 
+**Hide technologies** - add technologies your organisation does not use. Cards that mention these will be hidden from the board entirely. Useful for filtering out noise from platforms completely irrelevant to your environment.
+
 **Signal sources** - all sixteen built-in sources are listed with an Active/Paused toggle. Pause any source you do not want. Changes take effect on the next scheduled run.
 
 **Add your own sources** - paste any RSS or Atom feed URL and give it a name. It will be ingested daily alongside the built-in sources.
+
+---
+
+## Regulatory knowledge base (RAG)
+
+Cards include a compliance gap section that cites specific regulations, article numbers, and fine thresholds. This is powered by a RAG (Retrieval-Augmented Generation) knowledge base stored in the database.
+
+When a card is generated, the cluster summary is embedded and matched against pre-indexed article extracts from five regulations: NIS2, UK GDPR, DORA, FCA SYSC 13, and NCSC CAF. The most relevant articles are injected into the prompt so Claude writes the compliance gap from actual regulatory text rather than training memory.
+
+This requires a Voyage AI API key (free tier, no credit card required). Without it, cards are still generated but the compliance gap falls back to Claude's training knowledge.
+
+**Setup:**
+
+1. Sign up at [voyageai.com](https://www.voyageai.com) and get a free API key
+2. Add it to `backend/.env`:
+   ```
+   VOYAGE_API_KEY=your-key-here
+   ```
+3. Run the indexing script once to embed the regulation articles:
+   ```bash
+   cd backend
+   source .venv/bin/activate
+   python scripts/index_regulations.py
+   ```
+   This takes about 15 minutes due to the free tier rate limit (one-time only).
+
+To re-index after adding new regulation content, run the script again. It clears and rebuilds from scratch.
+
+---
+
+## Dismissing cards
+
+Cards can be dismissed from the board using the X button in the top-right corner of each card tile. Dismissed cards:
+
+- Are removed from the board immediately
+- Are archived permanently and will not reappear
+- Have their underlying cluster marked dismissed, so the same signals are not re-clustered on future pipeline runs
+
+To view dismissed cards, click **Dismissed** in the main header. The archive page shows all dismissed cards with an optional date filter.
 
 ---
 
@@ -460,7 +501,7 @@ pulse/
 - [x] Step 1 - Pull threat data from CISA, NVD, NCSC
 - [x] Step 2 - Group related signals into clusters
 - [x] Step 3 - Generate 5-layer intelligence cards using AI
-- [x] Step 4 - Dashboard with five domain lanes, card modal, tech stack highlighting, domain filter, team filter, per-team AI impact summaries, and simple mode for board-level readers
+- [x] Step 4 - Dashboard with five domain lanes, card modal, tech stack highlighting, domain filter, team filter, per-team AI impact summaries, simple mode for board-level readers, dismiss cards, hide technologies, and RAG-grounded compliance gaps
 - [ ] Step 5 - Connect to your SIEM or ticketing system
 - [ ] Step 6 - Weekly email digest
 - [ ] Step 7 - Onboarding flow for new organisations

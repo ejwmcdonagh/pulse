@@ -22,7 +22,8 @@ export default function Dashboard({ cards: initialCards, domains, technologies, 
     setCards((prev) => prev.filter((c) => c.id !== id));
   }
 
-  // Hide cards that mention any blocked technology
+  // Same haystack logic as tech-stack highlighting in SwimLanes - check headline,
+  // cluster summary, and evidence titles/points for any blocked technology mention.
   const isBlocked = (card: ProvocationCard) => {
     if (blockedTechnologies.length === 0) return false;
     const haystack = [
@@ -39,7 +40,8 @@ export default function Dashboard({ cards: initialCards, domains, technologies, 
     visibleCards = visibleCards.filter((c) => c.affected_teams?.includes(selectedTeam));
   }
 
-  // Filter by all_domains (not just primary) so cross-lane cards are included
+  // Check all_domains not just primary risk_domain - a supply chain card can also
+  // appear in vulnerability_patch, and the domain filter should catch both.
   if (selectedDomain) {
     visibleCards = visibleCards.filter((c) =>
       (c.metadata.all_domains ?? [c.risk_domain]).includes(selectedDomain)

@@ -83,6 +83,9 @@ async def dismiss_card(card_id: str):
     cluster_id = result.data["cluster_id"]
 
     db.table("provocation_cards").update({"status": "archived"}).eq("id", card_id).execute()
+    # Mark the cluster dismissed so its signals are excluded from future clustering runs.
+    # The _already_clustered_ids_for_domain function includes dismissed clusters, meaning
+    # the same signals won't form a new cluster unless fresh signals come in after this point.
     db.table("signal_clusters").update({"status": "dismissed"}).eq("id", cluster_id).execute()
 
     return {"dismissed": True}

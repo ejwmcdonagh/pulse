@@ -18,16 +18,19 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 _VOYAGE_EMBEDDINGS_URL = "https://api.voyageai.com/v1/embeddings"
-_EMBEDDING_MODEL = "voyage-3-lite"
+_EMBEDDING_MODEL = "voyage-3-lite"  # 512-dim, free tier, ~3 RPM on free plan
 
 
 def generate_embedding(text: str) -> list[float] | None:
-    """Return a 1024-dim embedding vector, or None if the key is absent or the call fails."""
+    """Return a 512-dim embedding vector, or None if the key is absent or the call fails."""
     if not settings.voyage_api_key:
         return None
 
     import time
 
+    # Voyage AI free tier rate-limits aggressively (~3 RPM). Retry with increasing
+    # backoff rather than failing immediately - this matters during the one-time
+    # index_regulations.py run where we embed 39 chunks back-to-back.
     for attempt in range(4):
         try:
             response = httpx.post(
@@ -64,8 +67,9 @@ def search_regulations(
     """
     Embed query text and retrieve the most relevant regulation chunks by cosine similarity.
 
-    Uses db.rpc() because PostgREST doesn't expose the pgvector <=> distance operator.
-    Returns [] if OPENAI_API_KEY is absent, embedding fails, or the DB call fails.
+    Uses db.rpc() because PostgREST doesn't expose the pgvector <=> distance operator
+    directly - vector similarity search requires a SQL function called via RPC.
+    Returns [] if VOYAGE_API_KEY is absent, embedding fails, or the DB call fails.
     """
     embedding = generate_embedding(query)
     if embedding is None:
