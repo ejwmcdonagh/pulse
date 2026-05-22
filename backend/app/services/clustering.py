@@ -267,7 +267,7 @@ def _already_clustered_ids_for_domain(db: Any, signal_ids: list[str], domain: "R
     )
 
     clustered: set[str] = set()
-    for row in result.data:
+    for row in (result.data or []):
         for sid in row.get("signal_ids", []):
             clustered.add(sid)
     return clustered

@@ -33,8 +33,11 @@ BUILTIN_SOURCES = [
 
 
 class ProfileUpdate(BaseModel):
-    technologies: list[str]
-    blocked_technologies: list[str] = []
+    # Both fields are optional so each settings form can update only what it owns.
+    # Omitting a field leaves the current DB value unchanged - prevents TechProfileForm
+    # and BlockedTechForm from clobbering each other when saved on the same page.
+    technologies: list[str] | None = None
+    blocked_technologies: list[str] | None = None
 
 
 class CustomSourceCreate(BaseModel):
@@ -79,16 +82,14 @@ async def toggle_builtin_source(source_id: str):
 
 @router.put("")
 async def update_profile(body: ProfileUpdate):
-    # Normalise: strip whitespace, deduplicate, sort for stable storage
-    technologies = sorted(set(t.strip() for t in body.technologies if t.strip()))
-    blocked = sorted(set(t.strip() for t in body.blocked_technologies if t.strip()))
+    updates: dict = {"updated_at": datetime.now(UTC).isoformat()}
+    if body.technologies is not None:
+        updates["technologies"] = sorted(set(t.strip() for t in body.technologies if t.strip()))
+    if body.blocked_technologies is not None:
+        updates["blocked_technologies"] = sorted(set(t.strip() for t in body.blocked_technologies if t.strip()))
     db = get_db()
-    db.table("org_profile").update({
-        "technologies": technologies,
-        "blocked_technologies": blocked,
-        "updated_at": datetime.now(UTC).isoformat(),
-    }).eq("id", 1).execute()
-    return {"technologies": technologies, "blocked_technologies": blocked}
+    result = db.table("org_profile").update(updates).eq("id", 1).execute()
+    return result.data[0] if result.data else updates
 
 
 # ── Custom sources ────────────────────────────────────────────────────────────

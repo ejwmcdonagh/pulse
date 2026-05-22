@@ -4,7 +4,8 @@ const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "";
 // Centralises header injection so every request automatically carries the API
 // key when one is configured. When NEXT_PUBLIC_API_KEY is not set, requests
 // are sent without the header and the backend bypasses auth entirely.
-function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
+// Exported so settings components can use it directly without duplicating logic.
+export function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
   return fetch(url, {
     ...init,
     headers: {

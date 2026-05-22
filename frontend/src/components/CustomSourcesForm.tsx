@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { CustomSource } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -16,7 +17,7 @@ export default function CustomSourcesForm({ initialSources }: { initialSources: 
     if (!name.trim() || !url.trim()) return;
     setError(null);
     startTransition(async () => {
-      const res = await fetch(`${API_BASE}/api/profile/sources`, {
+      const res = await apiFetch(`${API_BASE}/api/profile/sources`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim(), url: url.trim() }),
@@ -35,14 +36,16 @@ export default function CustomSourcesForm({ initialSources }: { initialSources: 
 
   const remove = (id: string) => {
     startTransition(async () => {
-      await fetch(`${API_BASE}/api/profile/sources/${id}`, { method: "DELETE" });
+      const res = await apiFetch(`${API_BASE}/api/profile/sources/${id}`, { method: "DELETE" });
+      if (!res.ok) return;
       setSources((prev) => prev.filter((s) => s.id !== id));
     });
   };
 
   const toggle = (id: string) => {
     startTransition(async () => {
-      const res = await fetch(`${API_BASE}/api/profile/sources/${id}/toggle`, { method: "PATCH" });
+      const res = await apiFetch(`${API_BASE}/api/profile/sources/${id}/toggle`, { method: "PATCH" });
+      if (!res.ok) return;
       const data = await res.json();
       setSources((prev) => prev.map((s) => (s.id === id ? { ...s, enabled: data.enabled } : s)));
     });

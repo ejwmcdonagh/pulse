@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { apiFetch } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export default function BlockedTechForm({
-  initialTechnologies,
   initialBlocked,
 }: {
   initialTechnologies: string[];
@@ -14,6 +14,7 @@ export default function BlockedTechForm({
   const [blocked, setBlocked] = useState<string[]>(initialBlocked);
   const [input, setInput] = useState("");
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const add = () => {
@@ -30,13 +31,19 @@ export default function BlockedTechForm({
   };
 
   const save = () => {
+    setError(null);
     startTransition(async () => {
-      await fetch(`${API_BASE}/api/profile`, {
+      // Only send blocked_technologies - the backend now handles partial updates
+      // so this cannot accidentally overwrite the tech stack saved by TechProfileForm
+      const res = await apiFetch(`${API_BASE}/api/profile`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        // Send both lists together so neither overwrites the other
-        body: JSON.stringify({ technologies: initialTechnologies, blocked_technologies: blocked }),
+        body: JSON.stringify({ blocked_technologies: blocked }),
       });
+      if (!res.ok) {
+        setError("Failed to save. Please try again.");
+        return;
+      }
       setSaved(true);
     });
   };
@@ -92,6 +99,7 @@ export default function BlockedTechForm({
           {isPending ? "Saving..." : "Save"}
         </button>
         {saved && <span className="text-sm text-green-600">Saved</span>}
+        {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
     </div>
   );

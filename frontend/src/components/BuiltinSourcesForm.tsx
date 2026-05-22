@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { BuiltinSource } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -11,9 +12,10 @@ export default function BuiltinSourcesForm({ initialSources }: { initialSources:
 
   const toggle = (id: string) => {
     startTransition(async () => {
-      const res = await fetch(`${API_BASE}/api/profile/sources/builtin/${id}/toggle`, {
+      const res = await apiFetch(`${API_BASE}/api/profile/sources/builtin/${id}/toggle`, {
         method: "PATCH",
       });
+      if (!res.ok) return;
       const data = await res.json();
       setSources((prev) =>
         prev.map((s) => (s.id === id ? { ...s, enabled: data.enabled } : s))

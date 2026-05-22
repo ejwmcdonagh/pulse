@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { apiFetch } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -8,6 +9,7 @@ export default function TechProfileForm({ initialTechnologies }: { initialTechno
   const [technologies, setTechnologies] = useState<string[]>(initialTechnologies);
   const [input, setInput] = useState("");
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const add = () => {
@@ -24,12 +26,17 @@ export default function TechProfileForm({ initialTechnologies }: { initialTechno
   };
 
   const save = () => {
+    setError(null);
     startTransition(async () => {
-      await fetch(`${API_BASE}/api/profile`, {
+      const res = await apiFetch(`${API_BASE}/api/profile`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ technologies }),
       });
+      if (!res.ok) {
+        setError("Failed to save. Please try again.");
+        return;
+      }
       setSaved(true);
     });
   };
@@ -88,6 +95,7 @@ export default function TechProfileForm({ initialTechnologies }: { initialTechno
           {isPending ? "Saving..." : "Save"}
         </button>
         {saved && <span className="text-sm text-green-600">Saved</span>}
+        {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
     </div>
   );
