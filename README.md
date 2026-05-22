@@ -366,7 +366,7 @@ Go to `http://localhost:3000` and click **Customize your feed** in the top right
 
 ## Switching AI models
 
-The system uses Claude Haiku by default. This costs about $0.10 per full pipeline run and is good for testing.
+The system uses Claude Haiku by default. This costs about $0.74 per full pipeline run (including RAG regulatory context) and is good for testing.
 
 For production, switch to Claude Opus for higher quality cards.
 
@@ -392,13 +392,13 @@ Note: both services use forced tool_choice for structured output, which is incom
 
 ### Approximate costs per pipeline run
 
-Based on actual runs with ~1,000 signals across 8 sources.
+Based on actual runs with ~2,100 signals across all 13 sources, including RAG regulatory context retrieval.
 
 | Step | Haiku | Opus |
 |------|-------|------|
 | Clustering | ~$0.06 | ~$0.30 |
-| Card generation | ~$0.10 | ~$0.50 |
-| **Total** | **~$0.16** | **~$0.80** |
+| Card generation + RAG | ~$0.68 | ~$3.40 |
+| **Total** | **~$0.74** | **~$3.70** |
 
 The first run is more expensive because it processes the full signal backlog. Daily incremental runs will cost less as only new signals get clustered.
 
