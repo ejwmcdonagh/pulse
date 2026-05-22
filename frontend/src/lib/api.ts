@@ -95,11 +95,17 @@ export type BuiltinSource = {
   enabled: boolean;
 };
 
-export async function fetchCards(limit = 50, offset = 0): Promise<ProvocationCard[]> {
-  const res = await apiFetch(
-    `${API_BASE}/api/cards?limit=${limit}&offset=${offset}`,
-    { cache: "no-store" },
-  );
+export async function fetchCards(
+  limit = 50,
+  offset = 0,
+  generatedBefore?: string,
+): Promise<ProvocationCard[]> {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  // Cursor-based pagination: when supplied, the backend returns cards strictly
+  // older than this timestamp. Stable across dismissals - offset alone would
+  // skip cards when items above shift positions due to status changes.
+  if (generatedBefore) params.set("generated_before", generatedBefore);
+  const res = await apiFetch(`${API_BASE}/api/cards?${params}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to fetch cards: ${res.status}`);
   const data = await res.json();
   return data.cards ?? [];

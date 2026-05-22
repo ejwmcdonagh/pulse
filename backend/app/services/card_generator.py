@@ -132,6 +132,17 @@ async def generate_cards(cluster_ids: list[str] | None = None) -> int:
     _MAX_ATTEMPTS = 3
 
     if cluster_ids:
+        # Manual regeneration path (used after prompt tuning). Reset state first
+        # so the cluster goes through the normal flow: delete any existing card,
+        # reset the cluster status and attempt counter. Without this, an existing
+        # card_generated cluster would produce a duplicate card with the same
+        # cluster_id (the provocation_cards table has no unique constraint).
+        db.table("provocation_cards").delete().in_("cluster_id", cluster_ids).execute()
+        db.table("signal_clusters").update({
+            "status": "pending",
+            "card_generation_attempts": 0,
+        }).in_("id", cluster_ids).execute()
+
         result = (
             db.table("signal_clusters")
             .select("*")

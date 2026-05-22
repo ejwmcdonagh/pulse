@@ -8,6 +8,7 @@ matters for graceful restarts in production (e.g. Docker, systemd, Fly.io).
 
 import logging
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 
 import truststore
 from fastapi import Depends, FastAPI
@@ -28,8 +29,33 @@ logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
 
 
+def _mark_stale_pipeline_runs_failed() -> None:
+    """
+    Mark any pipeline_runs row stuck in 'running' for over an hour as failed.
+
+    BackgroundTasks die silently if the worker crashes mid-run, leaving rows
+    permanently 'running'. A real run completes in well under an hour, so
+    anything older than that is definitely dead. Runs once at startup.
+    """
+    try:
+        cutoff = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
+        db = get_db()
+        result = db.table("pipeline_runs").update({
+            "status": "failed",
+            "completed_at": datetime.now(UTC).isoformat(),
+            "error": "Marked failed at startup - worker likely crashed during execution",
+        }).eq("status", "running").lt("started_at", cutoff).execute()
+        if result.data:
+            logger.info("Marked %d stale pipeline runs as failed", len(result.data))
+    except Exception:
+        # Best-effort cleanup - never let it block startup
+        logger.exception("Failed to clean up stale pipeline runs")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    _mark_stale_pipeline_runs_failed()
+
     if settings.scheduler_enabled:
         scheduler = create_scheduler()
         scheduler.start()

@@ -20,8 +20,6 @@ export default function Dashboard({ cards: initialCards, domains, technologies, 
   const [cards, setCards] = useState(initialCards);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
-  // offset tracks how many cards have been fetched so far for load more
-  const [offset, setOffset] = useState(initialCards.length);
   // only show the button when the last fetch returned a full page
   const [hasMore, setHasMore] = useState(initialCards.length === PAGE_SIZE);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -33,9 +31,17 @@ export default function Dashboard({ cards: initialCards, domains, technologies, 
   async function handleLoadMore() {
     setLoadingMore(true);
     try {
-      const more = await fetchCards(PAGE_SIZE, offset);
+      // Cursor-based pagination using generated_at of the oldest card we have.
+      // Offset would drift when cards are dismissed - the server filters by
+      // status=active, so dismissals shift positions and offset-based fetches
+      // would skip cards.
+      const oldest = cards[cards.length - 1];
+      if (!oldest) {
+        setHasMore(false);
+        return;
+      }
+      const more = await fetchCards(PAGE_SIZE, 0, oldest.generated_at);
       setCards((prev) => [...prev, ...more]);
-      setOffset((o) => o + more.length);
       setHasMore(more.length === PAGE_SIZE);
     } finally {
       setLoadingMore(false);

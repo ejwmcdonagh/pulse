@@ -59,17 +59,21 @@ async def list_cards(
     status: Annotated[str | None, Query()] = None,
     min_score: Annotated[float | None, Query(ge=0)] = None,
     before: Annotated[str | None, Query()] = None,
+    generated_before: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
     """
-    List provocation cards ordered by score descending.
+    List provocation cards ordered by generated_at descending.
 
     Filters:
     - risk_domain: narrow to a specific domain
     - status: 'active' | 'archived' (default: active)
     - min_score: only return cards above this score threshold
-    - before: ISO date string - only cards generated before this date
+    - before: ISO date string - only cards generated on or before this date (inclusive)
+    - generated_before: ISO timestamp cursor - only cards generated strictly before this
+      timestamp. Use for stable pagination when the underlying set may change
+      (dismissals shift offset-based pagination).
     """
     db = get_db()
     query = (
@@ -89,6 +93,10 @@ async def list_cards(
         query = query.gte("score", min_score)
     if before:
         query = query.lte("generated_at", before)
+    if generated_before:
+        # Strict less-than cursor: the previous page's last card has this exact
+        # timestamp, so excluding it prevents duplicates across pages
+        query = query.lt("generated_at", generated_before)
 
     result = query.execute()
     return {"cards": result.data, "offset": offset, "limit": limit}
@@ -157,8 +165,10 @@ async def get_team_summary(card_id: str, body: TeamSummaryRequest):
         f"Be concrete - name the likely systems, processes, or responsibilities involved. No jargon acronyms."
     )
 
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-    response = client.messages.create(
+    # AsyncAnthropic + await so the event loop isn't blocked during the
+    # 1-3 second API call - matters when multiple users click team badges
+    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+    response = await client.messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=256,
         messages=[{"role": "user", "content": prompt}],
