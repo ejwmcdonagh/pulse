@@ -291,19 +291,31 @@ curl -X POST "http://localhost:8000/api/ingest/run?source=krebs"
 
 The `cisa_kev` command will return around 900 signals. The others return 10-50 each. The `github_advisory` command can be slow if you have not set a `GITHUB_TOKEN` in your `.env` file.
 
-Now generate the intelligence clusters and cards:
+Now generate the intelligence clusters and cards. Both commands return immediately with a job ID - the work runs in the background.
 
 ```bash
 curl -X POST http://localhost:8000/api/clusters/run
 ```
 
-Wait for that to finish, then run:
+You will get back something like `{"job_id":"abc-123","status":"running"}`. Copy the job ID and poll until it completes:
+
+```bash
+curl "http://localhost:8000/api/pipeline/runs/abc-123"
+```
+
+When `status` shows `completed`, run card generation:
 
 ```bash
 curl -X POST http://localhost:8000/api/cards/run
 ```
 
-This last step calls the AI and takes 1-3 minutes. When it finishes, go back to `http://localhost:3000` and refresh the page. You should see cards in the swim lanes.
+Poll the new job ID the same way. Card generation calls the AI and takes 1-3 minutes. Once complete, go to `http://localhost:3000` and refresh. You should see cards in the swim lanes.
+
+To see all recent pipeline runs at any time:
+
+```bash
+curl http://localhost:8000/api/pipeline/runs
+```
 
 ---
 
@@ -314,6 +326,14 @@ The scheduler is off by default. To refresh your feed, run these two commands:
 ```bash
 curl -X POST http://localhost:8000/api/clusters/run
 curl -X POST http://localhost:8000/api/cards/run
+```
+
+Both return immediately with a `job_id`. Poll `GET /api/pipeline/runs/{job_id}` to check when each finishes before running the next. Card generation will find nothing to do if clustering has not completed yet.
+
+To see all recent pipeline runs:
+
+```bash
+curl http://localhost:8000/api/pipeline/runs
 ```
 
 To enable automatic daily runs, add this to `backend/.env`:
@@ -402,6 +422,28 @@ Cards can be dismissed from the board using the X button in the top-right corner
 - Have their underlying cluster marked dismissed, so the same signals are not re-clustered on future pipeline runs
 
 To view dismissed cards, click **Dismissed** in the main header. The archive page shows all dismissed cards with an optional date filter.
+
+---
+
+## API authentication
+
+By default the API is open so local development requires no extra config. If you deploy Pulse somewhere accessible from the internet, set an API key to restrict access.
+
+Add this to `backend/.env`:
+
+```
+API_KEY=your-secret-key-here
+```
+
+Generate a strong key with `openssl rand -hex 32`.
+
+Once set, every API request must include the header `X-Api-Key: your-secret-key-here`. The frontend reads this from an environment variable - create `frontend/.env.local` and add:
+
+```
+NEXT_PUBLIC_API_KEY=your-secret-key-here
+```
+
+Use the same value in both files. Restart both the backend and frontend after changing either.
 
 ---
 
@@ -501,7 +543,7 @@ pulse/
 - [x] Step 1 - Pull threat data from CISA, NVD, NCSC
 - [x] Step 2 - Group related signals into clusters
 - [x] Step 3 - Generate 5-layer intelligence cards using AI
-- [x] Step 4 - Dashboard with five domain lanes, card modal, tech stack highlighting, domain filter, team filter, per-team AI impact summaries, simple mode for board-level readers, dismiss cards, hide technologies, and RAG-grounded compliance gaps
+- [x] Step 4 - Dashboard with five domain lanes, card modal, tech stack highlighting, domain filter, team filter, per-team AI impact summaries, simple mode for board-level readers, dismiss cards, hide technologies, RAG-grounded compliance gaps, card pagination, background pipeline jobs with status polling, and optional API key authentication
 - [ ] Step 5 - Connect to your SIEM or ticketing system
 - [ ] Step 6 - Weekly email digest
 - [ ] Step 7 - Onboarding flow for new organisations
