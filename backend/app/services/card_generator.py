@@ -23,6 +23,7 @@ import anthropic
 
 from app.config import settings
 from app.db.client import get_db
+from app.services.embeddings import search_regulations
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,12 @@ _CARD_TOOL: dict[str, Any] = {
             },
             "compliance_gap": {
                 "type": "string",
-                "description": "2-3 sentences on which regulations make this risk commercially consequential. Frame as: exposes the org to [consequence] under [framework]. Use: NIS2, UK GDPR, DORA, FCA SYSC 13, ISO 27001.",
+                "description": (
+                    "2-3 sentences on which regulations make this risk commercially consequential. "
+                    "Frame as: exposes the org to [consequence] under [framework]. "
+                    "Where regulatory context is provided below, cite specific articles and fine "
+                    "thresholds from that context. Do not invent article numbers or fine figures."
+                ),
             },
             "simple_headline": {
                 "type": "string",
@@ -184,6 +190,10 @@ async def _generate_one(db: Any, client: anthropic.Anthropic, cluster: dict[str,
     if not signals:
         return False
 
+    # Retrieve relevant regulation chunks to ground the compliance_gap in real text
+    rag_query = f"{cluster['cluster_summary']} {cluster.get('risk_vector', '')}"
+    reg_chunks = search_regulations(db, rag_query, match_count=5)
+
     # Build a compact signal list for the prompt
     signal_descriptions = [
         {
@@ -196,6 +206,18 @@ async def _generate_one(db: Any, client: anthropic.Anthropic, cluster: dict[str,
         }
         for s in signals
     ]
+
+    # Build regulation context block - empty string when RAG unavailable (key absent or call failed)
+    reg_context = ""
+    if reg_chunks:
+        chunk_lines = []
+        for chunk in reg_chunks:
+            label = f"[{chunk['regulation'].upper().replace('_', ' ')} - {chunk['article_ref']}] {chunk['title']}"
+            chunk_lines.append(f"{label}\n{chunk['content']}")
+        reg_context = (
+            "\n\nRelevant regulatory context - use this to write the compliance_gap field:\n\n"
+            + "\n\n".join(chunk_lines)
+        )
 
     user_message = (
         f"Generate a provocation card for the following signal cluster.\n\n"
@@ -213,6 +235,7 @@ async def _generate_one(db: Any, client: anthropic.Anthropic, cluster: dict[str,
             + (f"\n  {s['summary']}" if s.get("summary") else "")
             for s in signal_descriptions
         )
+        + reg_context
     )
 
     response = client.messages.create(
@@ -220,7 +243,7 @@ async def _generate_one(db: Any, client: anthropic.Anthropic, cluster: dict[str,
         # Thinking is not supported on Haiku - only uncomment it when using Opus.
         model="claude-haiku-4-5-20251001",
         # model="claude-opus-4-7",
-        max_tokens=1024,
+        max_tokens=1500,
         system=_SYSTEM_PROMPT,
         tools=[_CARD_TOOL],
         tool_choice={"type": "tool", "name": "write_risk_card"},

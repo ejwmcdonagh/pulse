@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     # Anthropic API key - required for signal clustering (Step 2) and card generation (Step 3)
     anthropic_api_key: str = ""
 
+    # Voyage AI key - required for regulation chunk embeddings (RAG).
+    # Free tier at voyageai.com (200M tokens, no card required).
+    # If absent, card generation continues without regulatory context (graceful degradation).
+    voyage_api_key: str = ""
+
     # How many days of signals to look back when building clusters.
     # 30 days matches the NVD ingestion window and captures enough CISA KEV
     # entries to find cross-source convergence patterns.
